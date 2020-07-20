@@ -9,7 +9,9 @@ command_prefix: "!c"
 matrix:
   # The Matrix User ID of the bot account
   user_id: "@bot:example.com"
-  # Matrix account password
+  # Token for login will be used if given
+  user_token: ""
+  # Matrix account password, used if no token given
   user_password: ""
   # The URL of the homeserver to connect to
   homeserver_url: https://example.com
