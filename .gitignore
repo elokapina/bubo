@@ -20,3 +20,5 @@ config.yaml
 
 # Log files
 *.log
+
+store/
