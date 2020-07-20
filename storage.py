@@ -1,8 +1,8 @@
 import sqlite3
-import os.path
 import logging
+from importlib import import_module
 
-latest_db_version = 0
+latest_db_version = 2
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +19,8 @@ class Storage(object):
         """
         self.db_path = db_path
 
-        # Check if a database has already been connected
-        if os.path.isfile(self.db_path):
-            self._run_migrations()
-        else:
-            self._initial_setup()
+        self._initial_setup()
+        self._run_migrations()
 
     def _initial_setup(self):
         """Initial setup of the database"""
@@ -33,16 +30,33 @@ class Storage(object):
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
 
-        # Sync token table
-        self.cursor.execute("CREATE TABLE sync_token ("
-                            "dedupe_id INTEGER PRIMARY KEY, "
-                            "token TEXT NOT NULL"
-                            ")")
+        # Create database_version table if it doesn't exist
+        try:
+            self.cursor.execute("""
+                CREATE TABLE database_version (version INTEGER)
+            """)
+            self.cursor.execute("""
+                insert into database_version (version) values (0)
+            """)
+            self.conn.commit()
+        except sqlite3.OperationalError:
+            pass
 
         logger.info("Database setup complete")
 
     def _run_migrations(self):
         """Execute database migrations"""
-        # Initialize a connection to the database
-        self.conn = sqlite3.connect(self.db_path)
-        self.cursor = self.conn.cursor()
+        # Get current version of db
+        results = self.cursor.execute("select version from database_version")
+        version = results.fetchone()[0]
+        if version >= latest_db_version:
+            # No migrations to run
+            return
+
+        while version < latest_db_version:
+            version += 1
+            version_string = str(version).rjust(3, "0")
+            migration = import_module(f"migrations.{version_string}")
+            migration.forward(self.cursor)
+            self.cursor.execute("update database_version set version = ?", (version_string,))
+            self.conn.commit()
