@@ -18,6 +18,7 @@ from aiohttp import (
 )
 from callbacks import Callbacks
 from config import Config
+from rooms import maintain_configured_rooms
 from storage import Storage
 
 logger = logging.getLogger(__name__)
@@ -88,12 +89,15 @@ async def main():
                     )
                     return False
 
-            # Login succeeded!
+                # Login succeeded!
 
             # Sync encryption keys with the server
             # Required for participating in encrypted rooms
             if client.should_upload_keys:
                 await client.keys_upload()
+
+            # Maintain rooms
+            await maintain_configured_rooms(config)
 
             logger.info(f"Logged in as {config.user_id}")
             await client.sync_forever(timeout=30000, full_state=True)
