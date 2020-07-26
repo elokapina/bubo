@@ -1,11 +1,20 @@
 import logging
 
-from config import Config
+from storage import Storage
 
 logger = logging.getLogger(__name__)
 
 
-async def maintain_configured_rooms(config: Config):
+async def ensure_room_exists(room: tuple):
+    """
+    Maintains a room.
+    """
+    dbid, name, alias, room_id, title, icon, encrypted, public, power_to_write = room
+    logger.info(f"Ensuring room {name} ({alias}) exists")
+    # TODO: do actual ensuring
+
+
+async def maintain_configured_rooms(store: Storage):
     """
     Maintains the list of configured rooms.
 
@@ -13,5 +22,11 @@ async def maintain_configured_rooms(config: Config):
     """
     logger.info("Starting maintaining of rooms")
 
-    for alias, data in config.rooms.items():
-        print(alias, data)
+    results = store.cursor.execute("""
+        select * from rooms
+    """)
+
+    room = results.fetchone()
+    while room:
+        await ensure_room_exists(room)
+        room = results.fetchone()

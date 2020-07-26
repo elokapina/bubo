@@ -97,7 +97,7 @@ async def main():
                 await client.keys_upload()
 
             # Maintain rooms
-            await maintain_configured_rooms(config)
+            await maintain_configured_rooms(store)
 
             logger.info(f"Logged in as {config.user_id}")
             await client.sync_forever(timeout=30000, full_state=True)
