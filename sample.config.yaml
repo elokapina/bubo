@@ -15,6 +15,8 @@ matrix:
   user_password: ""
   # The URL of the homeserver to connect to
   homeserver_url: https://example.com
+  # The server name of the Matrix server
+  server_name: example.com
   # The device ID that is **non pre-existing** device
   # If this device ID already exists, messages will be dropped silently in encrypted rooms
   device_id: ABCDEFGHIJ
