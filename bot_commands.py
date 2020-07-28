@@ -32,6 +32,8 @@ class Command(object):
             await self._echo()
         elif self.command.startswith("help"):
             await self._show_help()
+        elif self.command.startswith("rooms"):
+            await self._rooms()
         else:
             await self._unknown_command()
 
@@ -55,6 +57,23 @@ class Command(object):
             text = "Available commands"
         else:
             text = "Unknown help topic!"
+        await send_text_to_room(self.client, self.room.room_id, text)
+
+    async def _rooms(self):
+        """List and operate on rooms"""
+        if not self.args:
+            text = "I currently maintain the following rooms:\n\n"
+            results = self.store.cursor.execute("""
+                select * from rooms
+            """)
+            rooms = []
+            room = results.fetchone()
+            while room:
+                rooms.append(f"* {room[1]} / #{room[2]}:{self.config.server_name} / {room[3]}\n")
+                room = results.fetchone()
+            text += "".join(rooms)
+        else:
+            text = "Unknown subcommand!"
         await send_text_to_room(self.client, self.room.room_id, text)
 
     async def _unknown_command(self):
