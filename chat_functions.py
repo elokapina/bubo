@@ -2,7 +2,7 @@ import logging
 import time
 
 from nio import (
-    SendRetryError, RoomInviteError, AsyncClient
+    SendRetryError, RoomInviteError, AsyncClient, ErrorResponse
 )
 from markdown import markdown
 
@@ -65,12 +65,18 @@ async def send_text_to_room(
         content["formatted_body"] = markdown(message)
 
     try:
-        await client.room_send(
+        response = await client.room_send(
             room_id,
             "m.room.message",
             content,
             ignore_unverified_devices=True,
         )
+        if isinstance(response, ErrorResponse):
+            if response.status_code == "M_LIMIT_EXCEEDED":
+                time.sleep(3)
+                await send_text_to_room(client, room_id, message, notice, markdown_convert)
+            else:
+                logger.warning(f"Failed to send message to {room_id} due to {response.status_code}")
     except SendRetryError:
         logger.exception(f"Unable to send message response to {room_id}")
 
