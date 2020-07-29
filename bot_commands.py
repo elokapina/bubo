@@ -1,7 +1,7 @@
 from nio import RoomInviteError
 from nio.schemas import check_user_id
 
-from chat_functions import send_text_to_room
+from chat_functions import send_text_to_room, invite_to_room
 
 TEXT_PERMISSION_DENIED = "I'm afraid I cannot let you do that."
 
@@ -107,19 +107,7 @@ class Command(object):
             return
 
         if len(self.args) == 1:
-            response = await self.client.room_invite(room_id, self.event.sender)
-            if isinstance(response, RoomInviteError):
-                await send_text_to_room(
-                    self.client,
-                    self.room.room_id,
-                    f"Failed to invite: {response.message} (code: {response.status_code})",
-                )
-            else:
-                await send_text_to_room(
-                    self.client,
-                    self.room.room_id,
-                    f"Invite to {self.args[0]} done!",
-                )
+            await invite_to_room(self.client, room_id, self.event.sender, self.room.room_id, self.args[0])
             return
         else:
             for counter, user_id in enumerate(self.args, 1):
@@ -135,20 +123,7 @@ class Command(object):
                         f"Invalid user mxid: {user_id}",
                     )
                 else:
-                    # Invite a user to a room
-                    response = await self.client.room_invite(room_id, user_id)
-                    if isinstance(response, RoomInviteError):
-                        await send_text_to_room(
-                            self.client,
-                            self.room.room_id,
-                            f"Failed to invite user {self.args[0]} to room: {response.message} (code: {response.status_code})",
-                        )
-                    else:
-                        await send_text_to_room(
-                            self.client,
-                            self.room.room_id,
-                            f"Invite for {self.args[0]} to {self.args[1]} done!",
-                        )
+                    await invite_to_room(self.client, room_id, user_id, self.room.room_id, self.args[0])
             return
 
     async def _show_help(self):

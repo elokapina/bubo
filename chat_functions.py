@@ -1,10 +1,27 @@
 import logging
 from nio import (
-    SendRetryError
+    SendRetryError, RoomInviteError, AsyncClient
 )
 from markdown import markdown
 
 logger = logging.getLogger(__name__)
+
+
+async def invite_to_room(client: AsyncClient, room_id: str, user_id: str, command_room_id: str, room_alias: str = None):
+    """Invite a user to a room"""
+    response = await client.room_invite(room_id, user_id)
+    if isinstance(response, RoomInviteError):
+        await send_text_to_room(
+            client,
+            command_room_id,
+            f"Failed to invite user {user_id} to room: {response.message} (code: {response.status_code})",
+        )
+    else:
+        await send_text_to_room(
+            client,
+            command_room_id,
+            f"Invite for {room_alias or room_id} to {user_id} done!",
+        )
 
 
 async def send_text_to_room(
