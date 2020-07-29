@@ -1,5 +1,7 @@
 from chat_functions import send_text_to_room
 
+TEXT_PERMISSION_DENIED = "I'm afraid I cannot let you do that."
+
 
 class Command(object):
     def __init__(self, client, store, config, command, room, event):
@@ -25,6 +27,27 @@ class Command(object):
         self.room = room
         self.event = event
         self.args = self.command.split()[1:]
+
+    async def _ensure_admin(self) -> bool:
+        if self.event.sender not in self.config.admins:
+            await send_text_to_room(
+                self.client,
+                self.room.room_id,
+                TEXT_PERMISSION_DENIED,
+            )
+            return False
+        return True
+
+    async def _ensure_coordinator(self) -> bool:
+        allowed_users = set(self.config.coordinators + self.config.admins)
+        if self.event.sender not in allowed_users:
+            await send_text_to_room(
+                self.client,
+                self.room.room_id,
+                TEXT_PERMISSION_DENIED,
+            )
+            return False
+        return True
 
     async def process(self):
         """Process the command"""
@@ -61,6 +84,8 @@ class Command(object):
 
     async def _rooms(self):
         """List and operate on rooms"""
+        if not await self._ensure_coordinator():
+            return
         if not self.args:
             text = "I currently maintain the following rooms:\n\n"
             results = self.store.cursor.execute("""
