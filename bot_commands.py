@@ -75,20 +75,38 @@ class Command(object):
         if not await self._ensure_coordinator():
             return
         if not self.args:
-            text = "Need more information. Either specify a room alias to invite you to or a user and room to invite " \
-                   "someone else to. Requires coordinator privileges."
+            text = "Need more information. Either specify a room alias to invite you to or room and users to invite " \
+                   "someone else to. Requires coordinator privileges.\n" \
+                   "\n" \
+                   "Examples:\n" \
+                   "\n" \
+                   "Invite yourself to a room maintained by the bot:\n" \
+                   "\n" \
+                   "  *invite #room:example.com*\n" \
+                   "\n" \
+                   "Invite one or more users to a room maintained by the bot:\n" \
+                   "\n" \
+                   "  *invite #room:example.com @user1:example.com @user2:example.org*"
             await send_text_to_room(self.client, self.room.room_id, text)
             return
-        if self.args[0].startswith("#"):
-            # Invite the user to a room
-            room_id = self.store.get_room_id(self.args[0])
-            if not room_id:
-                await send_text_to_room(
-                    self.client,
-                    self.room.room_id,
-                    f"Could not find room ID in my database for room {self.args[0]}",
-                )
-                return
+        if not self.args[0].startswith("#"):
+            await send_text_to_room(
+                self.client,
+                self.room.room_id,
+                f"That first argument doesn't look like a room alias.",
+            )
+            return
+
+        room_id = self.store.get_room_id(self.args[0])
+        if not room_id:
+            await send_text_to_room(
+                self.client,
+                self.room.room_id,
+                f"Could not find room ID in my database for room {self.args[0]}",
+            )
+            return
+
+        if len(self.args) == 1:
             response = await self.client.room_invite(room_id, self.event.sender)
             if isinstance(response, RoomInviteError):
                 await send_text_to_room(
@@ -104,35 +122,34 @@ class Command(object):
                 )
             return
         else:
-            try:
-                check_user_id(self.args[0]) and self.args[1].startswith("#")
-            except ValueError:
-                pass
-            else:
-                # Invite a user to a room
-                room_id = self.store.get_room_id(self.args[1])
-                if not room_id:
+            for counter, user_id in enumerate(self.args, 1):
+                if counter == 1:
+                    # Skip the room ID
+                    continue
+                try:
+                    check_user_id(user_id)
+                except ValueError:
                     await send_text_to_room(
                         self.client,
                         self.room.room_id,
-                        f"Could not find room ID in my database for room {self.args[0]}",
-                    )
-                    return
-                response = await self.client.room_invite(room_id, self.args[0])
-                if isinstance(response, RoomInviteError):
-                    await send_text_to_room(
-                        self.client,
-                        self.room.room_id,
-                        f"Failed to invite user {self.args[0]} to room: {response.message} (code: {response.status_code})",
+                        f"Invalid user mxid: {user_id}",
                     )
                 else:
-                    await send_text_to_room(
-                        self.client,
-                        self.room.room_id,
-                        f"Invite for {self.args[0]} to {self.args[1]} done!",
-                    )
-                return
-        await send_text_to_room(self.client, self.room.room_id, "Can't parse invite command.")
+                    # Invite a user to a room
+                    response = await self.client.room_invite(room_id, user_id)
+                    if isinstance(response, RoomInviteError):
+                        await send_text_to_room(
+                            self.client,
+                            self.room.room_id,
+                            f"Failed to invite user {self.args[0]} to room: {response.message} (code: {response.status_code})",
+                        )
+                    else:
+                        await send_text_to_room(
+                            self.client,
+                            self.room.room_id,
+                            f"Invite for {self.args[0]} to {self.args[1]} done!",
+                        )
+            return
 
     async def _show_help(self):
         """Show the help text"""
