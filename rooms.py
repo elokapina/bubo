@@ -69,10 +69,9 @@ async def maintain_configured_rooms(client: AsyncClient, store: Storage, config:
         select * from rooms
     """)
 
-    room = results.fetchone()
-    while room:
+    rooms = results.fetchall()
+    for room in rooms:
         try:
             await ensure_room_exists(room, client, store, config)
         except Exception as e:
             logger.error(f"Error with room '{room[2]}': {e}")
-        room = results.fetchone()

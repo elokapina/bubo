@@ -177,12 +177,11 @@ class Command(object):
             results = self.store.cursor.execute("""
                 select * from rooms
             """)
-            rooms = []
-            room = results.fetchone()
-            while room:
-                rooms.append(f"* {room[1]} / #{room[2]}:{self.config.server_name} / {room[3]}\n")
-                room = results.fetchone()
-            text += "".join(rooms)
+            rooms_list = []
+            rooms = results.fetchall()
+            for room in rooms:
+                rooms_list.append(f"* {room[1]} / #{room[2]}:{self.config.server_name} / {room[3]}\n")
+            text += "".join(rooms_list)
         else:
             text = "Unknown subcommand!"
         await send_text_to_room(self.client, self.room.room_id, text)
