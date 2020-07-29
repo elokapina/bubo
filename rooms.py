@@ -1,4 +1,5 @@
 import logging
+import time
 
 from nio import AsyncClient, RoomVisibility, EnableEncryptionBuilder
 
@@ -44,6 +45,12 @@ async def ensure_room_exists(room: tuple, client: AsyncClient, store: Storage, c
                 room_id = response.room_id
                 logger.info(f"Room '{alias}' created at {room_id}")
             else:
+                if response.status_code == "M_LIMIT_EXCEEDED":
+                    # Wait and try again
+                    logger.info("Hit request limits, waiting 3 seconds...")
+                    time.sleep(3)
+                    await ensure_room_exists(room, client, store, config)
+                    return
                 raise Exception(f"Could not create room: {response.message}, {response.status_code}")
         # Store room ID
         store.cursor.execute("""
