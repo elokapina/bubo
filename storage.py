@@ -3,7 +3,7 @@ import logging
 from importlib import import_module
 from typing import Optional
 
-latest_db_version = 2
+latest_db_version = 4
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class Storage(object):
         results = self.cursor.execute("select version from database_version")
         version = results.fetchone()[0]
         if version >= latest_db_version:
-            # No migrations to run
+            logger.info("No migrations to run")
             return
 
         while version < latest_db_version:
@@ -59,8 +59,10 @@ class Storage(object):
             version_string = str(version).rjust(3, "0")
             migration = import_module(f"migrations.{version_string}")
             migration.forward(self.cursor)
+            logger.info(f"Executing database migration {version_string}")
             self.cursor.execute("update database_version set version = ?", (version_string,))
             self.conn.commit()
+            logger.info(f"...done")
 
     def get_room_id(self, alias: str) -> Optional[str]:
         results = self.cursor.execute("""
