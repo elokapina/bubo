@@ -1,4 +1,6 @@
 import logging
+import time
+
 from nio import (
     SendRetryError, RoomInviteError, AsyncClient
 )
@@ -11,6 +13,10 @@ async def invite_to_room(client: AsyncClient, room_id: str, user_id: str, comman
     """Invite a user to a room"""
     response = await client.room_invite(room_id, user_id)
     if isinstance(response, RoomInviteError):
+        if response.status_code == "M_LIMIT_EXCEEDED":
+            time.sleep(3)
+            await invite_to_room(client, room_id, user_id, command_room_id, room_alias)
+            return
         await send_text_to_room(
             client,
             command_room_id,
