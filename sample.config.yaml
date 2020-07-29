@@ -23,6 +23,19 @@ matrix:
   # What to name the logged in device
   device_name: nio-template
 
+# Different commands might require a permission.
+# Here we list the minimum permission needed for the command.
+#
+# - "rooms" - listing the rooms: coordinator
+# - "invite" - invite a user to a room: coordinator
+permissions:
+  # Users who are allowed to do anything with the bot
+  admins:
+    - "@admin:example.com"
+  # Users who are allowed to maintain a limited set of functions
+  coordinators:
+    - "@coordinator:example.com"
+
 storage:
   # The path to the database
   database_filepath: "bot.db"

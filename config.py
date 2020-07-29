@@ -4,6 +4,9 @@ import os
 import yaml
 import sys
 from typing import List, Any
+
+from nio.schemas import check_user_id
+
 from errors import ConfigError
 
 logger = logging.getLogger()
@@ -68,6 +71,20 @@ class Config(object):
         self.server_name = self._get_cfg(["matrix", "server_name"], required=True)
 
         self.command_prefix = self._get_cfg(["command_prefix"], default="!c") + " "
+
+        # Permissions
+        self.admins = self._get_cfg(["permissions", "admins"], default=[])
+        try:
+            for admin in self.admins:
+                check_user_id(admin)
+        except ValueError as e:
+            raise ConfigError(str(e))
+        self.coordinators = self._get_cfg(["permissions", "coordinators"], default=[])
+        try:
+            for coordinator in self.coordinators:
+                check_user_id(coordinator)
+        except ValueError as e:
+            raise ConfigError(str(e))
 
     def _get_cfg(
             self,
