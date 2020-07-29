@@ -1,6 +1,7 @@
 import sqlite3
 import logging
 from importlib import import_module
+from typing import Optional
 
 latest_db_version = 2
 
@@ -60,3 +61,11 @@ class Storage(object):
             migration.forward(self.cursor)
             self.cursor.execute("update database_version set version = ?", (version_string,))
             self.conn.commit()
+
+    def get_room_id(self, alias: str) -> Optional[str]:
+        results = self.cursor.execute("""
+            select room_id from rooms where alias = ?
+        """, (alias.split(":")[0].strip("#"),))
+        room = results.fetchone()
+        if room:
+            return room[0]
