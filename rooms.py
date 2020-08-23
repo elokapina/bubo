@@ -1,7 +1,7 @@
 import logging
 import time
 
-from nio import AsyncClient, RoomVisibility, EnableEncryptionBuilder
+from nio import AsyncClient, RoomVisibility, EnableEncryptionBuilder, PowerLevels, RoomPutStateError
 
 from config import Config
 from storage import Storage
@@ -16,11 +16,48 @@ async def ensure_room_encrypted(room_id: str, client: AsyncClient):
     state = await client.room_get_state_event(room_id, "m.room.encryption")
     if state.content.get('errcode') == 'M_NOT_FOUND':
         event_dict = EnableEncryptionBuilder().as_dict()
-        await client.room_put_state(
+        response = await client.room_put_state(
             room_id=room_id,
             event_type=event_dict["type"],
             content=event_dict["content"],
         )
+        if isinstance(response, RoomPutStateError):
+            if response.status_code == "M_LIMIT_EXCEEDED":
+                time.sleep(3)
+                return ensure_room_power_levels(room_id, client, config)
+
+
+async def ensure_room_power_levels(room_id: str, client: AsyncClient, config: Config):
+    """
+    Ensure room has correct power levels.
+    """
+    state = await client.room_get_state_event(room_id, "m.room.power_levels")
+    users = state.content["users"]
+    # check existing users
+    for mxid, level in users.items():
+        if mxid == config.user_id:
+            continue
+
+        if mxid in (config.admins + config.coordinators) and level != 50:
+            users[mxid] = 50
+        if mxid not in (config.admins + config.coordinators) and level > 0:
+            users[mxid] = 0
+
+    # check new users
+    for user in (config.admins + config.coordinators):
+        users[user] = 50
+
+    if state.content["users"] != users:
+        state.content["users"] = users
+        response = await client.room_put_state(
+            room_id=room_id,
+            event_type="m.room.power_levels",
+            content=state.content,
+        )
+        if isinstance(response, RoomPutStateError):
+            if response.status_code == "M_LIMIT_EXCEEDED":
+                time.sleep(3)
+                return ensure_room_power_levels(room_id, client, config)
 
 
 async def ensure_room_exists(room: tuple, client: AsyncClient, store: Storage, config: Config):
@@ -83,6 +120,8 @@ async def ensure_room_exists(room: tuple, client: AsyncClient, store: Storage, c
         # TODO ensure room alias
 
     # TODO Add rooms to communities
+
+    await ensure_room_power_levels(room_id, client, config)
 
 
 async def maintain_configured_rooms(client: AsyncClient, store: Storage, config: Config):
