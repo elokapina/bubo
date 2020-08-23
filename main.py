@@ -17,6 +17,7 @@ from aiohttp import (
     ClientConnectionError
 )
 from callbacks import Callbacks
+from communities import maintain_configured_communities
 from config import Config
 from rooms import maintain_configured_rooms
 from storage import Storage
@@ -98,6 +99,9 @@ async def main():
 
             # Maintain rooms
             await maintain_configured_rooms(client, store, config)
+
+            # Maintain communities
+            await maintain_configured_communities(store, config)
 
             logger.info(f"Logged in as {config.user_id}")
             await client.sync_forever(timeout=30000, full_state=True)
