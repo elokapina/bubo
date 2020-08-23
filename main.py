@@ -4,6 +4,7 @@ import logging
 import asyncio
 import sys
 from time import sleep
+# noinspection PyPackageRequirements
 from nio import (
     AsyncClient,
     AsyncClientConfig,
@@ -12,6 +13,7 @@ from nio import (
     LoginError,
     LocalProtocolError,
 )
+# noinspection PyPackageRequirements
 from aiohttp import (
     ServerDisconnectedError,
     ClientConnectionError
@@ -60,7 +62,9 @@ async def main():
 
     # Set up event callbacks
     callbacks = Callbacks(client, store, config)
+    # noinspection PyTypeChecker
     client.add_event_callback(callbacks.message, (RoomMessageText,))
+    # noinspection PyTypeChecker
     client.add_event_callback(callbacks.invite, (InviteMemberEvent,))
 
     # Keep trying to reconnect on failure (with some time in-between)
