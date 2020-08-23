@@ -32,7 +32,8 @@ async def ensure_room_power_levels(room_id: str, client: AsyncClient, config: Co
     Ensure room has correct power levels.
     """
     state = await client.room_get_state_event(room_id, "m.room.power_levels")
-    users = state.content["users"]
+    users = state.content["users"].copy()
+
     # check existing users
     for mxid, level in users.items():
         if mxid == config.user_id:
