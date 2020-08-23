@@ -27,7 +27,7 @@ async def ensure_room_exists(room: tuple, client: AsyncClient, store: Storage, c
     """
     Maintains a room.
     """
-    dbid, name, alias, room_id, title, icon, encrypted, public, power_to_write = room
+    dbid, name, alias, room_id, title, icon, encrypted, public, power_to_write, room_type = room
     room_created = False
     logger.info(f"Ensuring room {name} ({alias}) exists")
     state = []
