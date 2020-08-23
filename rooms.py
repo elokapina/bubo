@@ -9,11 +9,26 @@ from storage import Storage
 logger = logging.getLogger(__name__)
 
 
+async def ensure_room_encrypted(room_id: str, client: AsyncClient):
+    """
+    Ensure room is encrypted.
+    """
+    state = await client.room_get_state_event(room_id, "m.room.encryption")
+    if state.content.get('errcode') == 'M_NOT_FOUND':
+        event_dict = EnableEncryptionBuilder().as_dict()
+        await client.room_put_state(
+            room_id=room_id,
+            event_type=event_dict["type"],
+            content=event_dict["content"],
+        )
+
+
 async def ensure_room_exists(room: tuple, client: AsyncClient, store: Storage, config: Config):
     """
     Maintains a room.
     """
     dbid, name, alias, room_id, title, icon, encrypted, public, power_to_write = room
+    room_created = False
     logger.info(f"Ensuring room {name} ({alias}) exists")
     state = []
     if encrypted:
@@ -44,6 +59,7 @@ async def ensure_room_exists(room: tuple, client: AsyncClient, store: Storage, c
             if getattr(response, "room_id", None):
                 room_id = response.room_id
                 logger.info(f"Room '{alias}' created at {room_id}")
+                room_created = True
             else:
                 if response.status_code == "M_LIMIT_EXCEEDED":
                     # Wait and try again
@@ -59,7 +75,12 @@ async def ensure_room_exists(room: tuple, client: AsyncClient, store: Storage, c
         store.conn.commit()
         logger.info(f"Room '{alias}' room ID stored to database")
 
-    # TODO fix room if needed
+    if not room_created:
+        if encrypted:
+            await ensure_room_encrypted(room_id, client)
+
+        # TODO ensure room name + title
+        # TODO ensure room alias
 
     # TODO Add rooms to communities
 
