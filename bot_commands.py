@@ -54,7 +54,9 @@ class Command(object):
 
     async def process(self):
         """Process the command"""
-        if self.command.startswith("echo"):
+        if self.command.startswith("communities"):
+            await self._communities()
+        elif self.command.startswith("echo"):
             await self._echo()
         elif self.command.startswith("help"):
             await self._show_help()
@@ -64,6 +66,24 @@ class Command(object):
             await self._rooms()
         else:
             await self._unknown_command()
+
+    async def _communities(self):
+        """List and operate on communities"""
+        if not await self._ensure_coordinator():
+            return
+        if not self.args:
+            text = "I currently maintain the following communities:\n\n"
+            results = self.store.cursor.execute("""
+                select * from communities
+            """)
+            communities = []
+            dbresult = results.fetchall()
+            for community in dbresult:
+                communities.append(f"* {community[1]} / +{community[2]}:{self.config.server_name} / {community[3]}\n")
+            text += "".join(communities)
+        else:
+            text = "Unknown subcommand!"
+        await send_text_to_room(self.client, self.room.room_id, text)
 
     async def _echo(self):
         """Echo back the command's arguments"""
