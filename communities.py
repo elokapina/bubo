@@ -29,7 +29,7 @@ async def ensure_community_exists(community: tuple, config: Config):
         logger.info(f"Community {name} not found, will try to create")
         response = requests.post(
             f"{api_prefix}/create_group",
-            data={
+            json={
                 "localpart": alias,
                 "profile": {
                     "name": name,
