@@ -1,4 +1,3 @@
-from nio import RoomInviteError
 from nio.schemas import check_user_id
 
 from chat_functions import send_text_to_room, invite_to_room
