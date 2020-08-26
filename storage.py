@@ -58,8 +58,10 @@ class Storage(object):
             version += 1
             version_string = str(version).rjust(3, "0")
             migration = import_module(f"migrations.{version_string}")
+            # noinspection PyUnresolvedReferences
             migration.forward(self.cursor)
             logger.info(f"Executing database migration {version_string}")
+            # noinspection SqlWithoutWhere
             self.cursor.execute("update database_version set version = ?", (version_string,))
             self.conn.commit()
             logger.info(f"...done")
@@ -71,3 +73,11 @@ class Storage(object):
         room = results.fetchone()
         if room:
             return room[0]
+
+    def store_community(self, name: str, alias: str, title: str):
+        self.cursor.execute("""
+            insert into communities
+                (name, alias, title) values 
+                (?, ?, ?);
+        """, (name, alias, title))
+        self.conn.commit()

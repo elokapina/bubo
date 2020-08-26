@@ -1,4 +1,5 @@
 import logging
+from typing import Tuple, Optional
 
 import requests
 
@@ -8,7 +9,7 @@ from storage import Storage
 logger = logging.getLogger(__name__)
 
 
-async def ensure_community_exists(community: tuple, config: Config):
+async def ensure_community_exists(community: tuple, config: Config) -> Tuple[str, Optional[str]]:
     """
     Maintains a community.
     """
@@ -24,7 +25,10 @@ async def ensure_community_exists(community: tuple, config: Config):
         f"{api_prefix}/groups/+{alias}:{config.server_name}/profile",
         headers=headers,
     )
-    if response.status_code != 200:
+    if response.status_code == 200:
+        # TODO ensure name + title
+        return "exists", None
+    else:
         # Try create the community
         logger.info(f"Community {name} not found, will try to create")
         response = requests.post(
@@ -39,12 +43,9 @@ async def ensure_community_exists(community: tuple, config: Config):
             },
             headers=headers,
         )
-        if response.status_code >= 400:
-            print(response.content)
-            return
-
-    # TODO ensure name + title
-    # TODO Add rooms
+        if response.status_code > 201:
+            return "error", f"{response.status_code} / {response.content}"
+        return "created", None
 
 
 async def maintain_configured_communities(store: Storage, config: Config):

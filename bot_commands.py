@@ -1,6 +1,10 @@
+import csv
+
+# noinspection PyPackageRequirements
 from nio.schemas import check_user_id
 
 from chat_functions import send_text_to_room, invite_to_room
+from communities import ensure_community_exists
 
 TEXT_PERMISSION_DENIED = "I'm afraid I cannot let you do that."
 
@@ -70,7 +74,41 @@ class Command(object):
         """List and operate on communities"""
         if not await self._ensure_coordinator():
             return
-        if not self.args:
+        if self.args:
+            if self.args[0] == "create":
+                # Create a community
+                # Figure out the actual parameters
+                args = self.args[1:]
+                params = csv.reader([' '.join(args)], delimiter=" ")
+                params = [param for param in params][0]
+                print(params)
+                if len(params) != 3:
+                    text = "Wrong number of arguments. Usage:\n" \
+                           "\n" \
+                           "`communities create NAME ALIAS TITLE`\n" \
+                           "\n" \
+                           "For example:\n" \
+                           "\n" \
+                           "communities create 'My epic community' epic-community 'The best community ever!'\n" \
+                           "\n" \
+                           "Note, ALIAS should only contain lower case ascii characters and dashes (maybe)."
+                else:
+                    result, error = await ensure_community_exists(
+                        (None, params[0], params[1], params[2], None, None),
+                        self.config,
+                    )
+                    if result == "created":
+                        text = f"Community {params[0]} (+{params[1]}:{self.config.server_name}) " \
+                               f"created successfully."
+                        self.store.store_community(params[0], params[1], params[2])
+                    elif result == "exists":
+                        text = f"Sorry! Community {params[0]} (+{params[1]}:{self.config.server_name}) " \
+                               f"already exists."
+                    else:
+                        text = f"Error creating community: {error}"
+            else:
+                text = "Unknown subcommand!"
+        else:
             text = "I currently maintain the following communities:\n\n"
             results = self.store.cursor.execute("""
                 select * from communities
@@ -80,8 +118,6 @@ class Command(object):
             for community in dbresult:
                 communities.append(f"* {community[1]} / +{community[2]}:{self.config.server_name} / {community[3]}\n")
             text += "".join(communities)
-        else:
-            text = "Unknown subcommand!"
         await send_text_to_room(self.client, self.room.room_id, text)
 
     async def _echo(self):
