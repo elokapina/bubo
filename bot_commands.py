@@ -81,7 +81,6 @@ class Command(object):
                 args = self.args[1:]
                 params = csv.reader([' '.join(args)], delimiter=" ")
                 params = [param for param in params][0]
-                print(params)
                 if len(params) != 3:
                     text = "Wrong number of arguments. Usage:\n" \
                            "\n" \
