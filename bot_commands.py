@@ -59,8 +59,6 @@ class Command(object):
         """Process the command"""
         if self.command.startswith("communities"):
             await self._communities()
-        elif self.command.startswith("echo"):
-            await self._echo()
         elif self.command.startswith("help"):
             await self._show_help()
         elif self.command.startswith("invite"):
@@ -118,11 +116,6 @@ class Command(object):
                 communities.append(f"* {community[1]} / +{community[2]}:{self.config.server_name} / {community[3]}\n")
             text += "".join(communities)
         await send_text_to_room(self.client, self.room.room_id, text)
-
-    async def _echo(self):
-        """Echo back the command's arguments"""
-        response = " ".join(self.args)
-        await send_text_to_room(self.client, self.room.room_id, response)
 
     async def _invite(self):
         """Handle an invite command"""
@@ -183,16 +176,20 @@ class Command(object):
     async def _show_help(self):
         """Show the help text"""
         if not self.args:
-            text = ("Hello, I am a bot made with matrix-nio! Use `help commands` to view "
-                    "available commands.")
+            text = ("Hello, I'm Bubo, a bot made with matrix-nio! Use `help commands` to view "
+                    "available commands.\n"
+                    "\n"
+                    "For source code, see https://github.com/elokapina/bubo")
             await send_text_to_room(self.client, self.room.room_id, text)
             return
 
         topic = self.args[0]
-        if topic == "rules":
-            text = "These are the rules!"
-        elif topic == "commands":
-            text = "Available commands"
+        if topic == "commands":
+            text = "Available commands:\n" \
+                   "\n" \
+                   "* communities - List and manage communities\n" \
+                   "* invite - Invite one or more users to a room\n" \
+                   "* rooms - List and manage rooms"
         else:
             text = "Unknown help topic!"
         await send_text_to_room(self.client, self.room.room_id, text)
