@@ -25,7 +25,7 @@ async def ensure_room_encrypted(room_id: str, client: AsyncClient):
         if isinstance(response, RoomPutStateError):
             if response.status_code == "M_LIMIT_EXCEEDED":
                 time.sleep(3)
-                return ensure_room_power_levels(room_id, client, config)
+                return ensure_room_encrypted(room_id, client)
 
 
 async def ensure_room_power_levels(room_id: str, client: AsyncClient, config: Config):
