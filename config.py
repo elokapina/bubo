@@ -5,6 +5,7 @@ import yaml
 import sys
 from typing import List, Any
 
+# noinspection PyPackageRequirements
 from nio.schemas import check_user_id
 
 from errors import ConfigError

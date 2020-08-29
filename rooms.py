@@ -1,7 +1,8 @@
 import logging
 import time
 
-from nio import AsyncClient, RoomVisibility, EnableEncryptionBuilder, PowerLevels, RoomPutStateError
+# noinspection PyPackageRequirements
+from nio import AsyncClient, RoomVisibility, EnableEncryptionBuilder, RoomPutStateError
 
 from config import Config
 from storage import Storage

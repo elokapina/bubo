@@ -1,10 +1,6 @@
-from chat_functions import (
-    send_text_to_room,
-)
 from bot_commands import Command
-from nio import (
-    JoinError,
-)
+# noinspection PyPackageRequirements
+from nio import JoinError
 from message_responses import Message
 
 import logging

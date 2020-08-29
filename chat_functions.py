@@ -1,6 +1,7 @@
 import logging
 import time
 
+# noinspection PyPackageRequirements
 from nio import (
     SendRetryError, RoomInviteError, AsyncClient, ErrorResponse
 )
