@@ -1,6 +1,8 @@
 import logging
 import time
 
+from typing import Tuple, Optional
+
 # noinspection PyPackageRequirements
 from nio import AsyncClient, RoomVisibility, EnableEncryptionBuilder, RoomPutStateError
 
@@ -62,7 +64,9 @@ async def ensure_room_power_levels(room_id: str, client: AsyncClient, config: Co
                 return ensure_room_power_levels(room_id, client, config)
 
 
-async def ensure_room_exists(room: tuple, client: AsyncClient, store: Storage, config: Config):
+async def ensure_room_exists(
+        room: tuple, client: AsyncClient, store: Storage, config: Config,
+) -> Tuple[str, Optional[str]]:
     """
     Maintains a room.
     """
@@ -104,19 +108,28 @@ async def ensure_room_exists(room: tuple, client: AsyncClient, store: Storage, c
                     # Wait and try again
                     logger.info("Hit request limits, waiting 3 seconds...")
                     time.sleep(3)
-                    await ensure_room_exists(room, client, store, config)
-                    return
+                    return await ensure_room_exists(room, client, store, config)
                 raise Exception(f"Could not create room: {response.message}, {response.status_code}")
-        # Store room ID
-        store.cursor.execute("""
-            update rooms set room_id = ? where id = ?
-        """, (room_id, dbid))
-        store.conn.commit()
-        logger.info(f"Room '{alias}' room ID stored to database")
+        if dbid:
+            # Store room ID
+            store.cursor.execute("""
+                update rooms set room_id = ? where id = ?
+            """, (room_id, dbid))
+            store.conn.commit()
+            logger.info(f"Room '{alias}' room ID stored to database")
+        else:
+            store.cursor.execute("""
+                insert into rooms (
+                    name, alias, room_id, title, encrypted, public
+                ) values (
+                    ?, ?, ?, ?, ?, ?
+                )
+            """, (name, alias, room_id, title, encrypted, public))
+            store.conn.commit()
+            logger.info(f"Room '{alias}' creation stored to database")
 
-    if not room_created:
-        if encrypted:
-            await ensure_room_encrypted(room_id, client)
+    if encrypted:
+        await ensure_room_encrypted(room_id, client)
 
         # TODO ensure room name + title
         # TODO ensure room alias
@@ -124,6 +137,10 @@ async def ensure_room_exists(room: tuple, client: AsyncClient, store: Storage, c
     # TODO Add rooms to communities
 
     await ensure_room_power_levels(room_id, client, config)
+
+    if room_created:
+        return "created", None
+    return "exists", None
 
 
 async def maintain_configured_rooms(client: AsyncClient, store: Storage, config: Config):

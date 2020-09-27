@@ -5,6 +5,7 @@ from nio.schemas import check_user_id
 
 from chat_functions import send_text_to_room, invite_to_room
 from communities import ensure_community_exists
+from rooms import ensure_room_exists
 
 TEXT_PERMISSION_DENIED = "I'm afraid I cannot let you do that."
 
@@ -79,7 +80,7 @@ class Command(object):
                 args = self.args[1:]
                 params = csv.reader([' '.join(args)], delimiter=" ")
                 params = [param for param in params][0]
-                if len(params) != 3:
+                if len(params) != 3 or params[0] == "help":
                     text = "Wrong number of arguments. Usage:\n" \
                            "\n" \
                            "`communities create NAME ALIAS TITLE`\n" \
@@ -121,7 +122,7 @@ class Command(object):
         """Handle an invite command"""
         if not await self._ensure_coordinator():
             return
-        if not self.args:
+        if not self.args or self.args[0] == "help":
             text = "Need more information. Either specify a room alias to invite you to or room and users to invite " \
                    "someone else to. Requires coordinator privileges.\n" \
                    "\n" \
@@ -189,7 +190,9 @@ class Command(object):
                    "\n" \
                    "* communities - List and manage communities\n" \
                    "* invite - Invite one or more users to a room\n" \
-                   "* rooms - List and manage rooms"
+                   "* rooms - List and manage rooms" \
+                   "\n" \
+                   "More help on commands or subcommands using 'help' as the next parameter."
         else:
             text = "Unknown help topic!"
         await send_text_to_room(self.client, self.room.room_id, text)
@@ -198,19 +201,68 @@ class Command(object):
         """List and operate on rooms"""
         if not await self._ensure_coordinator():
             return
-        if not self.args:
-            text = "I currently maintain the following rooms:\n\n"
-            results = self.store.cursor.execute("""
+        if self.args:
+            if self.args[0] == "create":
+                # Create a rooms
+                # Figure out the actual parameters
+                args = self.args[1:]
+                params = csv.reader([' '.join(args)], delimiter=" ")
+                params = [param for param in params][0]
+                if len(params) != 5 or params[3] not in ('yes', 'no') or params[3] not in ('yes', 'no') \
+                        or params[0] == "help":
+                    text = "Wrong number or bad arguments. Usage:\n" \
+                           "\n" \
+                           "`rooms create NAME ALIAS TITLE ENCRYPTED(yes/no) PUBLIC(yes/no)`\n" \
+                           "\n" \
+                           "For example:\n" \
+                           "\n" \
+                           "rooms create 'My awesome room' epic-room 'The best room ever!' yes no\n" \
+                           "\n" \
+                           "Note, ALIAS should only contain lower case ascii characters and dashes." \
+                           "\n" \
+                           "ENCRYPTED and PUBLIC are either 'yes' or 'no'."
+                else:
+                    result, error = await ensure_room_exists(
+                        (None, params[0], params[1], None, params[2], None, True if params[3] == "yes" else False,
+                         True if params[4] == "yes" else False, 0, ""),
+                        self.client,
+                        self.store,
+                        self.config,
+                    )
+                    if result == "created":
+                        text = f"Room {params[0]} (#{params[1]}:{self.config.server_name}) " \
+                               f"created successfully."
+                    elif result == "exists":
+                        text = f"Sorry! Room {params[0]} (#{params[1]}:{self.config.server_name}) " \
+                               f"already exists."
+                    else:
+                        text = f"Error creating room: {error}"
+            elif self.args[0] == "help":
+                text = "Subcommands and parameters for 'rooms':" \
+                       "\n" \
+                       "* `create NAME ALIAS TITLE ENCRYPTED(yes/no) PUBLIC(yes/no)`" \
+                       "* `list`" \
+                       "\n" \
+                       "Command without parameters will list rooms."
+            elif self.args[0] == "list":
+                text = await self._list_rooms()
+            else:
+                text = "Unknown subcommand!"
+        else:
+            text = await self._list_rooms()
+        await send_text_to_room(self.client, self.room.room_id, text)
+
+    async def _list_rooms(self):
+        text = "I currently maintain the following rooms:\n\n"
+        results = self.store.cursor.execute("""
                 select * from rooms
             """)
-            rooms_list = []
-            rooms = results.fetchall()
-            for room in rooms:
-                rooms_list.append(f"* {room[1]} / #{room[2]}:{self.config.server_name} / {room[3]}\n")
-            text += "".join(rooms_list)
-        else:
-            text = "Unknown subcommand!"
-        await send_text_to_room(self.client, self.room.room_id, text)
+        rooms_list = []
+        rooms = results.fetchall()
+        for room in rooms:
+            rooms_list.append(f"* {room[1]} / #{room[2]}:{self.config.server_name} / {room[3]}\n")
+        text += "".join(rooms_list)
+        return text
 
     async def _unknown_command(self):
         await send_text_to_room(
