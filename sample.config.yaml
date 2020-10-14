@@ -3,12 +3,12 @@
 # Default values are shown
 
 # The string to prefix messages with to talk to the bot in group chats
-command_prefix: "!c"
+command_prefix: "!bubo"
 
 # Options for connecting to the bot's Matrix account
 matrix:
   # The Matrix User ID of the bot account
-  user_id: "@bot:example.com"
+  user_id: "@bubo:example.com"
   # Token for login will be used if given
   user_token: ""
   # Matrix account password, used if no token given
@@ -21,7 +21,7 @@ matrix:
   # If this device ID already exists, messages will be dropped silently in encrypted rooms
   device_id: ABCDEFGHIJ
   # What to name the logged in device
-  device_name: nio-template
+  device_name: bubo
 
 # Different commands might require a permission.
 # Here we list the minimum permission needed for the command.
@@ -38,7 +38,7 @@ permissions:
 
 storage:
   # The path to the database
-  database_filepath: "/data/bot.db"
+  database_filepath: "/data/bubo.db"
   # The path to a directory for internal bot storage
   # containing encryption keys, sync tokens, etc.
   store_filepath: "/data"
@@ -53,7 +53,7 @@ logging:
     # Whether logging to a file is enabled
     enabled: false
     # The path to the file to log to. May be relative or absolute
-    filepath: bot.log
+    filepath: bubo.log
   # Configure logging to the console output
   console_logging:
     # Whether logging to the console is enabled

@@ -87,7 +87,7 @@ class Command(object):
                            "\n" \
                            "For example:\n" \
                            "\n" \
-                           "communities create 'My epic community' epic-community 'The best community ever!'\n" \
+                           "communities create \"My epic community\" epic-community \"The best community ever!\"\n" \
                            "\n" \
                            "Note, ALIAS should only contain lower case ascii characters and dashes (maybe)."
                 else:
@@ -216,7 +216,7 @@ class Command(object):
                            "\n" \
                            "For example:\n" \
                            "\n" \
-                           "rooms create 'My awesome room' epic-room 'The best room ever!' yes no\n" \
+                           "rooms create \"My awesome room\" epic-room \"The best room ever!\" yes no\n" \
                            "\n" \
                            "Note, ALIAS should only contain lower case ascii characters and dashes." \
                            "\n" \
