@@ -1,4 +1,5 @@
 import csv
+import logging
 
 # noinspection PyPackageRequirements
 from nio.schemas import check_user_id
@@ -6,6 +7,8 @@ from nio.schemas import check_user_id
 from chat_functions import send_text_to_room, invite_to_room
 from communities import ensure_community_exists
 from rooms import ensure_room_exists
+
+logger = logging.getLogger(__name__)
 
 TEXT_PERMISSION_DENIED = "I'm afraid I cannot let you do that."
 
@@ -58,6 +61,7 @@ class Command(object):
 
     async def process(self):
         """Process the command"""
+        logger.debug(f"Got command from {self.event.sender}: {self.command}")
         if self.command.startswith("communities"):
             await self._communities()
         elif self.command.startswith("help"):
