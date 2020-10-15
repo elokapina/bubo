@@ -30,7 +30,7 @@ async def ensure_room_encrypted(room_id: str, client: AsyncClient):
                 return ensure_room_encrypted(room_id, client)
 
 
-async def ensure_room_power_levels(room_id: str, client: AsyncClient, config: Config):
+async def ensure_room_power_levels(room_id: str, client: AsyncClient, config: Config, power_to_write: int):
     """
     Ensure room has correct power levels.
     """
@@ -54,7 +54,8 @@ async def ensure_room_power_levels(room_id: str, client: AsyncClient, config: Co
         for user in (config.admins + config.coordinators):
             users[user] = 50
 
-    if state.content["users"] != users:
+    if state.content["users"] != users or state.content.get("events_default") != power_to_write:
+        state.content["events_default"] = power_to_write
         state.content["users"] = users
         response = await client.room_put_state(
             room_id=room_id,
@@ -64,7 +65,7 @@ async def ensure_room_power_levels(room_id: str, client: AsyncClient, config: Co
         if isinstance(response, RoomPutStateError):
             if response.status_code == "M_LIMIT_EXCEEDED":
                 time.sleep(3)
-                return ensure_room_power_levels(room_id, client, config)
+                return ensure_room_power_levels(room_id, client, config, power_to_write)
 
 
 async def ensure_room_exists(
@@ -139,7 +140,7 @@ async def ensure_room_exists(
 
     # TODO Add rooms to communities
 
-    await ensure_room_power_levels(room_id, client, config)
+    await ensure_room_power_levels(room_id, client, config, power_to_write)
 
     if room_created:
         return "created", None
