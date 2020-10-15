@@ -26,15 +26,27 @@ matrix:
 # Different commands might require a permission.
 # Here we list the minimum permission needed for the command.
 #
-# - "rooms" - listing the rooms: coordinator
+# - "communities" - listing or maintaining communities: coordinator
+# - "rooms" - listing or maintaining rooms: coordinator
 # - "invite" - invite a user to a room: coordinator
 permissions:
   # Users who are allowed to do anything with the bot
+  # Note currently this is actually just the same as coordinator, but more powerful
+  # actions might be added that are admin only.
+  # Admins get power 50 in rooms they are joined to
+  # if "promote_users" is set to "true".
   admins:
     - "@admin:example.com"
   # Users who are allowed to maintain a limited set of functions
+  # Coordinators get power 50 in rooms they are joined to
+  # if "promote_users" is set to "true".
   coordinators:
     - "@coordinator:example.com"
+  ### Some configuration
+  # Demote users who have too much power in a room
+  demote_users: false
+  # Promote users who should have more power in a room
+  promote_users: true
 
 storage:
   # The path to the database

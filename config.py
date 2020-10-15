@@ -86,6 +86,8 @@ class Config(object):
                 check_user_id(coordinator)
         except ValueError as e:
             raise ConfigError(str(e))
+        self.permissions_demote_users = self._get_cfg(["permissions", "demote_users"], default=False)
+        self.permissions_promote_users = self._get_cfg(["permissions", "promote_users"], default=True)
 
     def _get_cfg(
             self,

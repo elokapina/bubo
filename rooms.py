@@ -42,14 +42,17 @@ async def ensure_room_power_levels(room_id: str, client: AsyncClient, config: Co
         if mxid == config.user_id:
             continue
 
-        if mxid in (config.admins + config.coordinators) and level != 50:
-            users[mxid] = 50
-        if mxid not in (config.admins + config.coordinators) and level > 0:
-            users[mxid] = 0
+        if config.permissions_promote_users:
+            if mxid in (config.admins + config.coordinators) and level < 50:
+                users[mxid] = 50
+        if config.permissions_demote_users:
+            if mxid not in (config.admins + config.coordinators) and level > 0:
+                users[mxid] = 0
 
     # check new users
-    for user in (config.admins + config.coordinators):
-        users[user] = 50
+    if config.permissions_promote_users:
+        for user in (config.admins + config.coordinators):
+            users[user] = 50
 
     if state.content["users"] != users:
         state.content["users"] = users

@@ -118,13 +118,16 @@ Same as without a subcommand, Bubo will tell you all about the rooms it maintain
 
 ### Room power levels
 
-Bubo is picky on who can have power in a room. All rooms that it maintains (ie the rooms
-stored in it's database) will be checked on start-up and Bubo will promote or demote
+Bubo can be picky on who can have power in a room. All rooms that it maintains (ie the rooms
+stored in it's database) will be checked on start-up and Bubo can be made to promote or demote
 users to their correct level, using the following rules:
 
 * Users marked as `admin` in the config will get power level 50
 * Users marked as `coordinator` in the config will get power level 50
 * Everybody else will get power level 0
+
+Bubo can be told to not demote or promote users in the config. By default it will 
+promote but not demote.
 
 Currently it's not possible to override this on a per room basis but is likely to come.
 
