@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Optional
 
 # noinspection PyPackageRequirements
 from nio import (
@@ -36,9 +37,10 @@ async def send_text_to_room(
     room_id,
     message,
     notice=True,
-    markdown_convert=True
+    markdown_convert=True,
+    reply_to_event_id: Optional[str] = None,
 ):
-    """Send text to a matrix room
+    """Send text to a matrix room.
 
     Args:
         client (nio.AsyncClient): The client to communicate to matrix with
@@ -48,10 +50,13 @@ async def send_text_to_room(
         message (str): The message content
 
         notice (bool): Whether the message should be sent with an "m.notice" message type
-            (will not ping users)
+            (will not ping users).
 
         markdown_convert (bool): Whether to convert the message content to markdown.
             Defaults to true.
+
+        reply_to_event_id: Whether this message is a reply to another event. The event
+            ID this is message is a reply to.
     """
     # Determine whether to ping room members or not
     msgtype = "m.notice" if notice else "m.text"
@@ -64,6 +69,9 @@ async def send_text_to_room(
 
     if markdown_convert:
         content["formatted_body"] = markdown(message)
+
+    if reply_to_event_id:
+        content["m.relates_to"] = {"m.in_reply_to": {"event_id": reply_to_event_id}}
 
     try:
         response = await client.room_send(
@@ -80,4 +88,3 @@ async def send_text_to_room(
                 logger.warning(f"Failed to send message to {room_id} due to {response.status_code}")
     except SendRetryError:
         logger.exception(f"Unable to send message response to {room_id}")
-
