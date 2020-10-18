@@ -61,7 +61,6 @@ class Command(object):
 
     async def process(self):
         """Process the command"""
-        logger.debug(f"Got command from {self.event.sender}: {self.command}")
         if self.command.startswith("communities"):
             await self._communities()
         elif self.command.startswith("help"):
