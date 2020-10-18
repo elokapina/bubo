@@ -34,6 +34,7 @@ async def ensure_room_power_levels(room_id: str, client: AsyncClient, config: Co
     """
     Ensure room has correct power levels.
     """
+    logger.debug(f"Ensuring power levels: {room_id}, power to write {power_to_write}")
     state = await client.room_get_state_event(room_id, "m.room.power_levels")
     users = state.content["users"].copy()
 
@@ -54,14 +55,17 @@ async def ensure_room_power_levels(room_id: str, client: AsyncClient, config: Co
         for user in (config.admins + config.coordinators):
             users[user] = 50
 
+    logger.debug(f"Current events_default: {state.content.get('events_default')}, new power_to_write: {power_to_write}")
     if state.content["users"] != users or state.content.get("events_default") != power_to_write:
         state.content["events_default"] = power_to_write
         state.content["users"] = users
+        logger.info(f"Updating room {room_id} power levels")
         response = await client.room_put_state(
             room_id=room_id,
             event_type="m.room.power_levels",
             content=state.content,
         )
+        logger.debug(f"Power levels update response: {response}")
         if isinstance(response, RoomPutStateError):
             if response.status_code == "M_LIMIT_EXCEEDED":
                 time.sleep(3)
@@ -75,6 +79,7 @@ async def ensure_room_exists(
     Maintains a room.
     """
     dbid, name, alias, room_id, title, icon, encrypted, public, power_to_write, room_type = room
+    logger.debug(f"Ensuring room: {room}")
     room_created = False
     logger.info(f"Ensuring room {name} ({alias}) exists")
     state = []
