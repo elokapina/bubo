@@ -11,6 +11,9 @@ from nio.schemas import check_user_id
 from errors import ConfigError
 
 logger = logging.getLogger()
+logging.getLogger("peewee").setLevel(
+    logging.INFO
+)  # Prevent debug messages from peewee lib
 
 
 class Config(object):
