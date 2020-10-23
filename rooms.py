@@ -1,13 +1,14 @@
 import logging
 import time
 
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 # noinspection PyPackageRequirements
 from nio import AsyncClient, RoomVisibility, EnableEncryptionBuilder, RoomPutStateError
 
 from config import Config
 from storage import Storage
+from utils import with_ratelimit
 
 logger = logging.getLogger(__name__)
 
@@ -30,30 +31,39 @@ async def ensure_room_encrypted(room_id: str, client: AsyncClient):
                 return ensure_room_encrypted(room_id, client)
 
 
-async def ensure_room_power_levels(room_id: str, client: AsyncClient, config: Config, power_to_write: int):
+async def ensure_room_power_levels(
+        room_id: str, client: AsyncClient, config: Config, power_to_write: int, members: List,
+):
     """
     Ensure room has correct power levels.
     """
     logger.debug(f"Ensuring power levels: {room_id}, power to write {power_to_write}")
     state = await client.room_get_state_event(room_id, "m.room.power_levels")
     users = state.content["users"].copy()
+    member_ids = {member.user_id for member in members}
 
     # check existing users
     for mxid, level in users.items():
         if mxid == config.user_id:
             continue
 
+        # Promote users if they need more power
         if config.permissions_promote_users:
-            if mxid in (config.admins + config.coordinators) and level < 50:
+            if mxid in (config.admins + config.coordinators) and mxid in member_ids and level < 50:
                 users[mxid] = 50
+        # Demote users if they should have less power
         if config.permissions_demote_users:
             if mxid not in (config.admins + config.coordinators) and level > 0:
                 users[mxid] = 0
+        # Always demote users with too much power if not in the room
+        if mxid not in member_ids:
+            users[mxid] = 0
 
     # check new users
     if config.permissions_promote_users:
         for user in (config.admins + config.coordinators):
-            users[user] = 50
+            if user in member_ids:
+                users[user] = 50
 
     logger.debug(f"Current events_default: {state.content.get('events_default')}, new power_to_write: {power_to_write}")
     if state.content["users"] != users or state.content.get("events_default") != power_to_write:
@@ -69,7 +79,7 @@ async def ensure_room_power_levels(room_id: str, client: AsyncClient, config: Co
         if isinstance(response, RoomPutStateError):
             if response.status_code == "M_LIMIT_EXCEEDED":
                 time.sleep(3)
-                return ensure_room_power_levels(room_id, client, config, power_to_write)
+                return ensure_room_power_levels(room_id, client, config, power_to_write, members)
 
 
 async def ensure_room_exists(
@@ -145,7 +155,10 @@ async def ensure_room_exists(
 
     # TODO Add rooms to communities
 
-    await ensure_room_power_levels(room_id, client, config, power_to_write)
+    room_members = await with_ratelimit(client, "joined_members", room_id)
+    members = getattr(room_members, "members", [])
+
+    await ensure_room_power_levels(room_id, client, config, power_to_write, members)
 
     if room_created:
         return "created", None
