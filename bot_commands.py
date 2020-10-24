@@ -115,9 +115,10 @@ class Command(object):
                 event_id = await send_text_to_room(self.client, self.room.room_id, text)
                 if event_id:
                     self.store.store_breakout_room(event_id, breakout_room["room_id"])
-                text = "*Error: failed to store breakout room data. The room was created, " \
-                       "but invites via reactions will not work."
-                await send_text_to_room(self.client, self.room.room_id, text)
+                else:
+                    text = "*Error: failed to store breakout room data. The room was created, " \
+                           "but invites via reactions will not work."
+                    await send_text_to_room(self.client, self.room.room_id, text)
                 return
         else:
             text = "Unknown subcommand! Try `breakout help`"
