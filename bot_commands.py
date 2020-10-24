@@ -107,7 +107,7 @@ class Command(object):
                 )
                 text = f"Breakout room for '{params[0]}' created!\n"
                 if breakout_room["alias"]:
-                    text += f"\n\nJoin via {breakout_room['alias']}.\n"
+                    text += f"\n\nJoin via #{breakout_room['alias']}:{self.config.server_name}.\n"
                 text += "\n\nReact to this message with a 👍 to get invited to the room."
                 if params[2] == "yes":
                     text += " Please note due to the room being encrypted, history will not be visible to users " \
