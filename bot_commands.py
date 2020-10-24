@@ -92,9 +92,9 @@ class Command(object):
         if not self.args or self.args[0] == "help":
             text = help_text
         elif self.args:
-            args = self.args[1:]
-            params = csv.reader([' '.join(args)], delimiter=" ")
+            params = csv.reader([' '.join(self.args)], delimiter=" ")
             params = [param for param in params][0]
+            logger.debug(f"Breakout room params: {params}")
             if len(params) != 3:
                 text = help_text
             else:
