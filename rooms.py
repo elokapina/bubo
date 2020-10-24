@@ -1,16 +1,59 @@
 import logging
 import time
 
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Dict
 
 # noinspection PyPackageRequirements
 from nio import AsyncClient, RoomVisibility, EnableEncryptionBuilder, RoomPutStateError
+# noinspection PyPackageRequirements
+from slugify import slugify
 
+from chat_functions import invite_to_room
 from config import Config
 from storage import Storage
 from utils import with_ratelimit
 
 logger = logging.getLogger(__name__)
+
+
+async def create_breakout_room(
+    name: str, encrypted: bool, public: bool, client: AsyncClient, created_by: str
+) -> Dict:
+    """
+    Create a breakout room.
+    """
+    logger.info(f"Attempting to create breakout room '{name}'")
+    alias = None
+    if public:
+        alias = slugify(
+            name,
+            max_length=30,
+            word_boundary=True,
+        )
+    state = []
+    if encrypted:
+        state.append(
+            EnableEncryptionBuilder().as_dict(),
+        )
+    response = await with_ratelimit(
+        client,
+        "room_create",
+        alias=alias,
+        initial_state=state,
+        name=name,
+        visibility=RoomVisibility.public if public else RoomVisibility.private,
+    )
+    if getattr(response, "room_id", None):
+        room_id = response.room_id
+        logger.info(f"Breakout room '{name}' created at {room_id}")
+    else:
+        raise Exception(f"Could not create breakout room: {response.message}, {response.status_code}")
+    await make_user_admin(room_id, created_by, client)
+    await invite_to_room(client, room_id, created_by, room_id)
+    return {
+        "room_id": room_id,
+        "alias": alias,
+    }
 
 
 async def ensure_room_encrypted(room_id: str, client: AsyncClient):
@@ -163,6 +206,23 @@ async def ensure_room_exists(
     if room_created:
         return "created", None
     return "exists", None
+
+
+async def make_user_admin(room_id: str, user_id: str, client: AsyncClient):
+    """
+    Make a user an admin in the room.
+    """
+    logger.debug(f"Making user admin: {room_id}, user: {user_id}")
+    state = await client.room_get_state_event(room_id, "m.room.power_levels")
+    state.content["users"][user_id] = 100
+    response = await with_ratelimit(
+        client,
+        "room_put_state",
+        room_id=room_id,
+        event_type="m.room.power_levels",
+        content=state.content,
+    )
+    logger.debug(f"Power levels update response: {response}")
 
 
 async def maintain_configured_rooms(client: AsyncClient, store: Storage, config: Config):

@@ -6,7 +6,7 @@ from nio.schemas import check_user_id
 
 from chat_functions import send_text_to_room, invite_to_room
 from communities import ensure_community_exists
-from rooms import ensure_room_exists
+from rooms import ensure_room_exists, create_breakout_room
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,59 @@ class Command(object):
             await self._rooms()
         else:
             await self._unknown_command()
+
+    async def _breakout(self):
+        """Create a breakout room"""
+        help_text = "Creates a breakout room. Usage:\n" \
+                    "\n" \
+                    "breakout TOPIC PUBLIC(yes/no) ENCRYPTED(yes/no)\n" \
+                    "\n" \
+                    "For example:\n" \
+                    "\n" \
+                    "breakout \"Strategy discussion\" yes no\n" \
+                    "\n" \
+                    "The user requesting the breakout room will be automatically invited to the new room " \
+                    "and made admin. " \
+                    "If the room is public, an alias will be automatically created and posted to the room " \
+                    "where the breakout command was issued. Other users can react to this message with a 👍 to " \
+                    "get invited to the room. If the room is public, anyone can of course join via the alias."
+        if not self.args or self.args[0] == "help":
+            text = help_text
+        elif self.args:
+            args = self.args[1:]
+            params = csv.reader([' '.join(args)], delimiter=" ")
+            params = [param for param in params][0]
+            if len(params) != 3:
+                text = help_text
+            else:
+                breakout_room = await create_breakout_room(
+                    params[0],
+                    True if params[1] == "yes" else False,
+                    True if params[2] == "yes" else False,
+                    self.client,
+                    self.event.sender,
+                )
+                text = f"Breakout room for '{params[0]}' created!\n"
+                if breakout_room["alias"]:
+                    text += f"\n\nJoin via {breakout_room['alias']}.\n"
+                text += "\n\nReact to this message with a 👍 to get invited to the room."
+                if params[2] == "yes":
+                    text += " Please note due to the room being encrypted, history will not be visible to users " \
+                            "until they get invited to the room."
+                event_id = await send_text_to_room(self.client, self.room.room_id, text)
+                if event_id:
+                    self.store.store_breakout_room(event_id, breakout_room["room_id"])
+                text = "*Error: failed to store breakout room data. The room was created, " \
+                       "but invites via reactions will not work."
+                await send_text_to_room(self.client, self.room.room_id, text)
+                return
+        else:
+            text = "Unknown subcommand! Try `breakout help`"
+        await send_text_to_room(self.client, self.room.room_id, text)
+
+    async def _breakout_reaction(self):
+        # TODO implement
+        pass
 
     async def _communities(self):
         """List and operate on communities"""
@@ -191,6 +244,7 @@ class Command(object):
         if topic == "commands":
             text = "Available commands:\n" \
                    "\n" \
+                   "* breakout - Create a breakout room\n" \
                    "* communities - List and manage communities\n" \
                    "* invite - Invite one or more users to a room\n" \
                    "* rooms - List and manage rooms" \

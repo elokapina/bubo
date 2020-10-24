@@ -3,7 +3,7 @@ import logging
 from importlib import import_module
 from typing import Optional
 
-latest_db_version = 5
+latest_db_version = 6
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +73,14 @@ class Storage(object):
         room = results.fetchone()
         if room:
             return room[0]
+
+    def store_breakout_room(self, event_id: str, room_id: str):
+        self.cursor.execute("""
+            insert into breakout_rooms
+                (event_id, room_id) values 
+                (?, ?);
+        """, (event_id, room_id))
+        self.conn.commit()
 
     def store_community(self, name: str, alias: str, title: str):
         self.cursor.execute("""

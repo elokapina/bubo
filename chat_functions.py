@@ -11,7 +11,9 @@ from markdown import markdown
 logger = logging.getLogger(__name__)
 
 
-async def invite_to_room(client: AsyncClient, room_id: str, user_id: str, command_room_id: str, room_alias: str = None):
+async def invite_to_room(
+    client: AsyncClient, room_id: str, user_id: str, command_room_id: str = None, room_alias: str = None,
+):
     """Invite a user to a room"""
     response = await client.room_invite(room_id, user_id)
     if isinstance(response, RoomInviteError):
@@ -19,12 +21,13 @@ async def invite_to_room(client: AsyncClient, room_id: str, user_id: str, comman
             time.sleep(3)
             await invite_to_room(client, room_id, user_id, command_room_id, room_alias)
             return
-        await send_text_to_room(
-            client,
-            command_room_id,
-            f"Failed to invite user {user_id} to room: {response.message} (code: {response.status_code})",
-        )
-    else:
+        if command_room_id:
+            await send_text_to_room(
+                client,
+                command_room_id,
+                f"Failed to invite user {user_id} to room: {response.message} (code: {response.status_code})",
+            )
+    elif command_room_id:
         await send_text_to_room(
             client,
             command_room_id,
@@ -39,7 +42,7 @@ async def send_text_to_room(
     notice=True,
     markdown_convert=True,
     reply_to_event_id: Optional[str] = None,
-):
+) -> str:
     """Send text to a matrix room.
 
     Args:
@@ -86,5 +89,9 @@ async def send_text_to_room(
                 await send_text_to_room(client, room_id, message, notice, markdown_convert)
             else:
                 logger.warning(f"Failed to send message to {room_id} due to {response.status_code}")
+        try:
+            return response[2]["event_id"]
+        except Exception as ex:
+            logger.warning(f"Failed to get event_id from send_text_to_room: {ex}, response: {response}")
     except SendRetryError:
         logger.exception(f"Unable to send message response to {room_id}")
