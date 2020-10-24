@@ -143,6 +143,23 @@ commands). It will currently ensure the following details are correct:
 * Ensure room power levels (see above "Room power levels") 
 * Ensure required power to write to a room (defaults to 0, but can be set in the database per room)
 
+## Development
+
+If you need help or want to otherwise chat, jump to `#bubo:elokapina.fi`!
+
+### Releasing
+
+* Update `CHANGELOG.md`
+* Commit changelog
+* Make a tag
+* Push the tag
+* Make a GitHub release, copy the changelog for the release there
+* Build a docker image
+  * `docker build . -t elokapinaorg/bubo:v<version>`
+* Push docker image
+* Update topic in `#bubo:elokapina.fi`
+* Consider announcing on `#thisweekinmatrix:matrix.org` \o/
+
 ## TODO
 
 Add more features! Bubo wants to help you manage your community!
