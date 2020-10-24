@@ -86,7 +86,7 @@ async def send_text_to_room(
         if isinstance(response, ErrorResponse):
             if response.status_code == "M_LIMIT_EXCEEDED":
                 time.sleep(3)
-                await send_text_to_room(client, room_id, message, notice, markdown_convert)
+                return await send_text_to_room(client, room_id, message, notice, markdown_convert)
             else:
                 logger.warning(f"Failed to send message to {room_id} due to {response.status_code}")
         elif isinstance(response, RoomSendResponse):
