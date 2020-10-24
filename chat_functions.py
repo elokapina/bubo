@@ -4,7 +4,7 @@ from typing import Optional
 
 # noinspection PyPackageRequirements
 from nio import (
-    SendRetryError, RoomInviteError, AsyncClient, ErrorResponse
+    SendRetryError, RoomInviteError, AsyncClient, ErrorResponse, RoomSendResponse
 )
 from markdown import markdown
 
@@ -89,9 +89,9 @@ async def send_text_to_room(
                 await send_text_to_room(client, room_id, message, notice, markdown_convert)
             else:
                 logger.warning(f"Failed to send message to {room_id} due to {response.status_code}")
-        try:
-            return response[2]["event_id"]
-        except Exception as ex:
-            logger.warning(f"Failed to get event_id from send_text_to_room: {ex}, response: {response}")
+        elif isinstance(response, RoomSendResponse):
+            return response.event_id
+        else:
+            logger.warning(f"Failed to get event_id from send_text_to_room, response: {response}")
     except SendRetryError:
         logger.exception(f"Unable to send message response to {room_id}")
