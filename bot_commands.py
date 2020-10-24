@@ -78,7 +78,7 @@ class Command(object):
         """Create a breakout room"""
         help_text = "Creates a breakout room. Usage:\n" \
                     "\n" \
-                    "breakout TOPIC PUBLIC(yes/no) ENCRYPTED(yes/no)\n" \
+                    "breakout TOPIC ENCRYPTED(yes/no) PUBLIC(yes/no)\n" \
                     "\n" \
                     "For example:\n" \
                     "\n" \
