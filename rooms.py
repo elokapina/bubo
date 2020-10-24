@@ -49,7 +49,7 @@ async def create_breakout_room(
     else:
         raise Exception(f"Could not create breakout room: {response.message}, {response.status_code}")
     await make_user_admin(room_id, created_by, client)
-    await invite_to_room(client, room_id, created_by, room_id)
+    await invite_to_room(client, room_id, created_by)
     return {
         "room_id": room_id,
         "alias": alias,
