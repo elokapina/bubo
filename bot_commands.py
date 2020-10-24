@@ -61,7 +61,9 @@ class Command(object):
 
     async def process(self):
         """Process the command"""
-        if self.command.startswith("communities"):
+        if self.command.startswith("breakout"):
+            await self._breakout()
+        elif self.command.startswith("communities"):
             await self._communities()
         elif self.command.startswith("help"):
             await self._show_help()
