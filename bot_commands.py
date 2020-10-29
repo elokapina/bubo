@@ -78,51 +78,36 @@ class Command(object):
         """Create a breakout room"""
         help_text = "Creates a breakout room. Usage:\n" \
                     "\n" \
-                    "breakout TOPIC ENCRYPTED(yes/no) PUBLIC(yes/no)\n" \
+                    "breakout TOPIC\n" \
                     "\n" \
                     "For example:\n" \
                     "\n" \
-                    "breakout \"Strategy discussion\" yes no\n" \
+                    "breakout Bot's are cool\n" \
                     "\n" \
+                    "Any remaining text after the `breakout` command will be used as the name of the room. " \
                     "The user requesting the breakout room will be automatically invited to the new room " \
                     "and made admin. " \
-                    "If the room is public, an alias will be automatically created and posted to the room " \
-                    "where the breakout command was issued. Other users can react to this message with a 👍 to " \
-                    "get invited to the room. If the room is public, anyone can of course join via the alias."
+                    "Other users can react to this message with a 👍 to " \
+                    "get invited to the room."
         if not self.args or self.args[0] == "help":
-            text = help_text
+            await send_text_to_room(self.client, self.room.room_id, help_text)
         elif self.args:
-            params = csv.reader([' '.join(self.args)], delimiter=" ")
-            params = [param for param in params][0]
-            logger.debug(f"Breakout room params: {params}")
-            if len(params) != 3:
-                text = help_text
+            name = ' '.join(self.args)
+            logger.debug(f"Breakout room name: '{name}'")
+            room_id = await create_breakout_room(
+                name=name,
+                client=self.client,
+                created_by=self.event.sender,
+            )
+            text = f"Breakout room '{name}' created!\n"
+            text += "\n\nReact to this message with a 👍 to get invited to the room."
+            event_id = await send_text_to_room(self.client, self.room.room_id, text)
+            if event_id:
+                self.store.store_breakout_room(event_id, room_id)
             else:
-                breakout_room = await create_breakout_room(
-                    params[0],
-                    True if params[1] == "yes" else False,
-                    True if params[2] == "yes" else False,
-                    self.client,
-                    self.event.sender,
-                )
-                text = f"Breakout room for '{params[0]}' created!\n"
-                if breakout_room["alias"]:
-                    text += f"\n\nJoin via #{breakout_room['alias']}:{self.config.server_name}.\n"
-                text += "\n\nReact to this message with a 👍 to get invited to the room."
-                if params[2] == "yes":
-                    text += " Please note due to the room being encrypted, history will not be visible to users " \
-                            "until they get invited to the room."
-                event_id = await send_text_to_room(self.client, self.room.room_id, text)
-                if event_id:
-                    self.store.store_breakout_room(event_id, breakout_room["room_id"])
-                else:
-                    text = "*Error: failed to store breakout room data. The room was created, " \
-                           "but invites via reactions will not work."
-                    await send_text_to_room(self.client, self.room.room_id, text)
-                return
-        else:
-            text = "Unknown subcommand! Try `breakout help`"
-        await send_text_to_room(self.client, self.room.room_id, text)
+                text = "*Error: failed to store breakout room data. The room was created, " \
+                       "but invites via reactions will not work.*"
+                await send_text_to_room(self.client, self.room.room_id, text)
 
     async def _breakout_reaction(self):
         # TODO implement

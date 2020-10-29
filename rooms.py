@@ -5,8 +5,6 @@ from typing import Tuple, Optional, List, Dict
 
 # noinspection PyPackageRequirements
 from nio import AsyncClient, RoomVisibility, EnableEncryptionBuilder, RoomPutStateError
-# noinspection PyPackageRequirements
-from slugify import slugify
 
 from chat_functions import invite_to_room
 from config import Config
@@ -17,31 +15,17 @@ logger = logging.getLogger(__name__)
 
 
 async def create_breakout_room(
-    name: str, encrypted: bool, public: bool, client: AsyncClient, created_by: str
+    name: str, client: AsyncClient, created_by: str
 ) -> Dict:
     """
     Create a breakout room.
     """
     logger.info(f"Attempting to create breakout room '{name}'")
-    alias = None
-    if public:
-        alias = slugify(
-            name,
-            max_length=30,
-            word_boundary=True,
-        )
-    state = []
-    if encrypted:
-        state.append(
-            EnableEncryptionBuilder().as_dict(),
-        )
     response = await with_ratelimit(
         client,
         "room_create",
-        alias=alias,
-        initial_state=state,
         name=name,
-        visibility=RoomVisibility.public if public else RoomVisibility.private,
+        visibility=RoomVisibility.private,
     )
     if getattr(response, "room_id", None):
         room_id = response.room_id
@@ -50,10 +34,7 @@ async def create_breakout_room(
         raise Exception(f"Could not create breakout room: {response.message}, {response.status_code}")
     await make_user_admin(room_id, created_by, client)
     await invite_to_room(client, room_id, created_by)
-    return {
-        "room_id": room_id,
-        "alias": alias,
-    }
+    return room_id
 
 
 async def ensure_room_encrypted(room_id: str, client: AsyncClient):
