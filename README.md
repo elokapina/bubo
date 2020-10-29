@@ -46,6 +46,28 @@ Bubo will automatically join rooms it is invited to.
 
 ### Commands
 
+#### `breakout`
+
+Creates a breakout room. The user who requested the breakout room creation will
+automatically be invited to the room and made admin. The room will be created
+as non-public and non-encrypted.
+
+Other users can react to the breakout room creation response with any emoji reaction to
+get an invite to the room.
+
+Syntax:
+
+    breakout TOPIC
+    
+For example:
+
+    breakout How awesome is Bubo?
+    
+Any remaining text after `breakout` will be used as the room name.
+
+Note that while Bubo will stay in the breakout room itself, it will not maintain
+it in any way like the rooms created using the `rooms` command.
+
 #### `communities`
 
 Maintain communities.

@@ -13,6 +13,7 @@ from nio import (
     LoginError,
     LocalProtocolError,
     MegolmEvent,
+    UnknownEvent,
 )
 # noinspection PyPackageRequirements
 from aiohttp import (
@@ -69,6 +70,9 @@ async def main():
     client.add_event_callback(callbacks.invite, (InviteMemberEvent,))
     # noinspection PyTypeChecker
     client.add_event_callback(callbacks.decryption_failure, (MegolmEvent,))
+    # Nio doesn't currently have m.reaction events so we catch UnknownEvent for reactions and filter there
+    # noinspection PyTypeChecker
+    client.add_event_callback(callbacks.reaction, (UnknownEvent,))
 
     # Keep trying to reconnect on failure (with some time in-between)
     while True:

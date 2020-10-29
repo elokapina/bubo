@@ -4,14 +4,16 @@ from typing import Optional
 
 # noinspection PyPackageRequirements
 from nio import (
-    SendRetryError, RoomInviteError, AsyncClient, ErrorResponse
+    SendRetryError, RoomInviteError, AsyncClient, ErrorResponse, RoomSendResponse
 )
 from markdown import markdown
 
 logger = logging.getLogger(__name__)
 
 
-async def invite_to_room(client: AsyncClient, room_id: str, user_id: str, command_room_id: str, room_alias: str = None):
+async def invite_to_room(
+    client: AsyncClient, room_id: str, user_id: str, command_room_id: str = None, room_alias: str = None,
+):
     """Invite a user to a room"""
     response = await client.room_invite(room_id, user_id)
     if isinstance(response, RoomInviteError):
@@ -19,17 +21,21 @@ async def invite_to_room(client: AsyncClient, room_id: str, user_id: str, comman
             time.sleep(3)
             await invite_to_room(client, room_id, user_id, command_room_id, room_alias)
             return
-        await send_text_to_room(
-            client,
-            command_room_id,
-            f"Failed to invite user {user_id} to room: {response.message} (code: {response.status_code})",
-        )
-    else:
+        if command_room_id:
+            await send_text_to_room(
+                client,
+                command_room_id,
+                f"Failed to invite user {user_id} to room: {response.message} (code: {response.status_code})",
+            )
+            logger.warning(f"Failed to invite user {user_id} to room: {response.message} "
+                           f"(code: {response.status_code})")
+    elif command_room_id:
         await send_text_to_room(
             client,
             command_room_id,
             f"Invite for {room_alias or room_id} to {user_id} done!",
         )
+        logger.info(f"Invite for {room_alias or room_id} to {user_id} done!")
 
 
 async def send_text_to_room(
@@ -39,7 +45,7 @@ async def send_text_to_room(
     notice=True,
     markdown_convert=True,
     reply_to_event_id: Optional[str] = None,
-):
+) -> str:
     """Send text to a matrix room.
 
     Args:
@@ -83,8 +89,12 @@ async def send_text_to_room(
         if isinstance(response, ErrorResponse):
             if response.status_code == "M_LIMIT_EXCEEDED":
                 time.sleep(3)
-                await send_text_to_room(client, room_id, message, notice, markdown_convert)
+                return await send_text_to_room(client, room_id, message, notice, markdown_convert)
             else:
                 logger.warning(f"Failed to send message to {room_id} due to {response.status_code}")
+        elif isinstance(response, RoomSendResponse):
+            return response.event_id
+        else:
+            logger.warning(f"Failed to get event_id from send_text_to_room, response: {response}")
     except SendRetryError:
         logger.exception(f"Unable to send message response to {room_id}")

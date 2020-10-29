@@ -1,5 +1,11 @@
 # Changelog
 
+## unreleased
+
+### Added
+
+* New command `breakout`. Allows splitting discussion into breakout rooms.
+
 ## v0.1.0 - 2020-10-24
 
 Initial version with the following commands:
