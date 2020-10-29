@@ -74,6 +74,14 @@ class Storage(object):
         if room:
             return room[0]
 
+    def get_breakout_room_id(self, event_id: str):
+        results = self.cursor.execute("""
+            select room_id from breakout_rooms where event_id = ?;
+        """, (event_id,))
+        room = results.fetchone()
+        if room:
+            return room[0]
+
     def store_breakout_room(self, event_id: str, room_id: str):
         self.cursor.execute("""
             insert into breakout_rooms

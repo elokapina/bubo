@@ -52,7 +52,7 @@ Creates a breakout room. The user who requested the breakout room creation will
 automatically be invited to the room and made admin. The room will be created
 as non-public and non-encrypted.
 
-Other users can react to the breakout room creation response with a thumbs up to
+Other users can react to the breakout room creation response with any emoji reaction to
 get an invite to the room.
 
 Syntax:

@@ -2,7 +2,7 @@ from bot_commands import Command
 # noinspection PyPackageRequirements
 from nio import JoinError
 
-from chat_functions import send_text_to_room
+from chat_functions import send_text_to_room, invite_to_room
 from message_responses import Message
 
 import logging
@@ -62,6 +62,31 @@ class Callbacks(object):
 
         command = Command(self.client, self.store, self.config, msg, room, event)
         await command.process()
+
+    async def reaction(self, room, event):
+        """Callback for when a reaction is received."""
+        logger.debug(f"Got unknown event to {room.room_id} from {event.sender}.")
+        if event.type != "m.reaction":
+            return
+        relates_to = event.source.get("content", {}).get("m.relates_to")
+        logger.debug(f"Relates to: {relates_to}")
+        if not relates_to:
+            return
+        event_id = relates_to.get("event_id")
+        rel_type = relates_to.get("rel_type")
+        if not event_id or rel_type != "m.annotation":
+            return
+        # TODO split to "reactions.py" or similar
+        # Breakout creation reaction?
+        room_id = self.store.get_breakout_room_id(event_id)
+        logger.debug(f"Breakout room query found room_id: {room_id}")
+        if room_id:
+            logger.info(f"Found breakout room for reaction in {room.room_id} by {event.sender} - "
+                        f"inviting to {room_id}")
+            # Do an invite
+            await invite_to_room(
+                self.client, room_id, event.sender,
+            )
 
     async def invite(self, room, event):
         """Callback for when an invite is received. Join the room specified in the invite"""

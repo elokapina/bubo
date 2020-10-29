@@ -87,7 +87,7 @@ class Command(object):
                     "Any remaining text after the `breakout` command will be used as the name of the room. " \
                     "The user requesting the breakout room will be automatically invited to the new room " \
                     "and made admin. " \
-                    "Other users can react to this message with a 👍 to " \
+                    "Other users can react to the bot response message with any emoji reaction to " \
                     "get invited to the room."
         if not self.args or self.args[0] == "help":
             await send_text_to_room(self.client, self.room.room_id, help_text)
@@ -100,7 +100,7 @@ class Command(object):
                 created_by=self.event.sender,
             )
             text = f"Breakout room '{name}' created!\n"
-            text += "\n\nReact to this message with a 👍 to get invited to the room."
+            text += "\n\nReact to this message with any emoji reaction to get invited to the room."
             event_id = await send_text_to_room(self.client, self.room.room_id, text)
             if event_id:
                 self.store.store_breakout_room(event_id, room_id)

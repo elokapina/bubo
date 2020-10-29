@@ -27,12 +27,15 @@ async def invite_to_room(
                 command_room_id,
                 f"Failed to invite user {user_id} to room: {response.message} (code: {response.status_code})",
             )
+            logger.warning(f"Failed to invite user {user_id} to room: {response.message} "
+                           f"(code: {response.status_code})")
     elif command_room_id:
         await send_text_to_room(
             client,
             command_room_id,
             f"Invite for {room_alias or room_id} to {user_id} done!",
         )
+        logger.info(f"Invite for {room_alias or room_id} to {user_id} done!")
 
 
 async def send_text_to_room(
