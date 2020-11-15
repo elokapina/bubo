@@ -56,12 +56,12 @@ async def ensure_room_encrypted(room_id: str, client: AsyncClient):
 
 
 async def ensure_room_power_levels(
-        room_id: str, client: AsyncClient, config: Config, power_to_write: int, members: List,
+        room_id: str, client: AsyncClient, config: Config, members: List,
 ):
     """
     Ensure room has correct power levels.
     """
-    logger.debug(f"Ensuring power levels: {room_id}, power to write {power_to_write}")
+    logger.debug(f"Ensuring power levels: {room_id}")
     state = await client.room_get_state_event(room_id, "m.room.power_levels")
     users = state.content["users"].copy()
     member_ids = {member.user_id for member in members}
@@ -89,9 +89,7 @@ async def ensure_room_power_levels(
             if user in member_ids:
                 users[user] = 50
 
-    logger.debug(f"Current events_default: {state.content.get('events_default')}, new power_to_write: {power_to_write}")
-    if state.content["users"] != users or state.content.get("events_default") != power_to_write:
-        state.content["events_default"] = power_to_write
+    if state.content["users"] != users:
         state.content["users"] = users
         logger.info(f"Updating room {room_id} power levels")
         response = await client.room_put_state(
@@ -103,7 +101,7 @@ async def ensure_room_power_levels(
         if isinstance(response, RoomPutStateError):
             if response.status_code == "M_LIMIT_EXCEEDED":
                 time.sleep(3)
-                return ensure_room_power_levels(room_id, client, config, power_to_write, members)
+                return ensure_room_power_levels(room_id, client, config, members)
 
 
 async def ensure_room_exists(
@@ -112,7 +110,7 @@ async def ensure_room_exists(
     """
     Maintains a room.
     """
-    dbid, name, alias, room_id, title, icon, encrypted, public, power_to_write, room_type = room
+    dbid, name, alias, room_id, title, icon, encrypted, public, room_type = room
     logger.debug(f"Ensuring room: {room}")
     room_created = False
     logger.info(f"Ensuring room {name} ({alias}) exists")
@@ -121,9 +119,9 @@ async def ensure_room_exists(
         state.append(
             EnableEncryptionBuilder().as_dict(),
         )
-    power_level_override = {
-        "events_default": power_to_write,
-    }
+    # power_level_override = {
+    #     "events_default": power_to_write,
+    # }
     # Check if room exists
     if not room_id:
         logger.info(f"Room '{alias}' ID unknown")
@@ -140,7 +138,7 @@ async def ensure_room_exists(
                 name=name,
                 topic=title,
                 initial_state=state,
-                power_level_override=power_level_override,
+                # power_level_override=power_level_override,
             )
             if getattr(response, "room_id", None):
                 room_id = response.room_id
@@ -182,7 +180,7 @@ async def ensure_room_exists(
     room_members = await with_ratelimit(client, "joined_members", room_id)
     members = getattr(room_members, "members", [])
 
-    await ensure_room_power_levels(room_id, client, config, power_to_write, members)
+    await ensure_room_power_levels(room_id, client, config, members)
 
     if room_created:
         return "created", None

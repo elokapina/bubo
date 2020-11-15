@@ -163,7 +163,6 @@ commands). It will currently ensure the following details are correct:
   the database without an ID and restarting)
 * Ensure rooms marked as encrypted are encrypted
 * Ensure room power levels (see above "Room power levels") 
-* Ensure required power to write to a room (defaults to 0, but can be set in the database per room)
 
 ## Development
 
