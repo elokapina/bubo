@@ -6,5 +6,3 @@ def forward(cursor):
             room_id text
         )
     """)
-
-

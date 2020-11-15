@@ -3,7 +3,7 @@ import logging
 from importlib import import_module
 from typing import Optional
 
-latest_db_version = 6
+latest_db_version = 7
 
 logger = logging.getLogger(__name__)
 
