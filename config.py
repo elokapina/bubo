@@ -92,6 +92,9 @@ class Config(object):
         self.permissions_demote_users = self._get_cfg(["permissions", "demote_users"], default=False, required=False)
         self.permissions_promote_users = self._get_cfg(["permissions", "promote_users"], default=True, required=False)
 
+        # Rooms
+        self.rooms = self._get_cfg(["rooms"], default={}, required=False)
+
     def _get_cfg(
             self,
             path: List[str],
@@ -113,7 +116,7 @@ class Config(object):
             # If at any point we don't get our expected option...
             if config is None:
                 # Raise an error if it was required
-                if required or not default:
+                if required or default is False or default is None:
                     raise ConfigError(f"Config option {'.'.join(path)} is required")
 
                 # or return the default value

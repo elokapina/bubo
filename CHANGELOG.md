@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+* Default power levels can now be configured in config as `rooms.power_levels` (see
+  sample config file). If defined, they will be used in room creation power level
+  overrides. By default, they will also be enforced on old rooms, unless
+  `rooms.enforce_power_in_old_rooms` is set to `false`.
+
 ### Removed
 
 * Removed the `power_to_write` override in the `rooms` database table. Rooms

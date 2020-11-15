@@ -140,6 +140,8 @@ Same as without a subcommand, Bubo will tell you all about the rooms it maintain
 
 ### Room power levels
 
+#### User power
+
 Bubo can be picky on who can have power in a room. All rooms that it maintains (ie the rooms
 stored in it's database) will be checked on start-up and Bubo can be made to promote or demote
 users to their correct level, using the following rules:
@@ -153,6 +155,12 @@ promote but not demote users in the room. Users not in the room who have too muc
 will always be demoted.
 
 Currently it's not possible to override this on a per room basis but is likely to come.
+
+#### Room power defaults
+
+The sample config contains `room.power_levels` for the default power levels that
+Bubo will use for new rooms. By default, it will also enforce these power levels on
+old rooms, unless told not to.
 
 ### Room and community maintenance
 

@@ -1,5 +1,6 @@
 import logging
 import time
+from copy import deepcopy
 
 from typing import Tuple, Optional, List, Dict
 
@@ -62,7 +63,7 @@ async def ensure_room_power_levels(
     Ensure room has correct power levels.
     """
     logger.debug(f"Ensuring power levels: {room_id}")
-    state = await client.room_get_state_event(room_id, "m.room.power_levels")
+    state = await with_ratelimit(client, "room_get_state_event", room_id=room_id, event_type="m.room.power_levels")
     users = state.content["users"].copy()
     member_ids = {member.user_id for member in members}
 
@@ -89,19 +90,21 @@ async def ensure_room_power_levels(
             if user in member_ids:
                 users[user] = 50
 
-    if state.content["users"] != users:
-        state.content["users"] = users
+    power_levels = config.rooms.get("power_levels") if config.rooms.get("enforce_power_in_old_rooms", True) else {}
+    new_power = deepcopy(state.content)
+    new_power.update(power_levels)
+    new_power["users"] = users
+
+    if state.content != new_power:
         logger.info(f"Updating room {room_id} power levels")
-        response = await client.room_put_state(
+        response = await with_ratelimit(
+            client,
+            "room_put_state",
             room_id=room_id,
             event_type="m.room.power_levels",
-            content=state.content,
+            content=new_power,
         )
         logger.debug(f"Power levels update response: {response}")
-        if isinstance(response, RoomPutStateError):
-            if response.status_code == "M_LIMIT_EXCEEDED":
-                time.sleep(3)
-                return ensure_room_power_levels(room_id, client, config, members)
 
 
 async def ensure_room_exists(
@@ -119,9 +122,6 @@ async def ensure_room_exists(
         state.append(
             EnableEncryptionBuilder().as_dict(),
         )
-    # power_level_override = {
-    #     "events_default": power_to_write,
-    # }
     # Check if room exists
     if not room_id:
         logger.info(f"Room '{alias}' ID unknown")
@@ -138,7 +138,7 @@ async def ensure_room_exists(
                 name=name,
                 topic=title,
                 initial_state=state,
-                # power_level_override=power_level_override,
+                power_level_override=config.rooms.get("power_levels"),
             )
             if getattr(response, "room_id", None):
                 room_id = response.room_id
