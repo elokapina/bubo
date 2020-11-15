@@ -9,6 +9,10 @@
   overrides. By default, they will also be enforced on old rooms, unless
   `rooms.enforce_power_in_old_rooms` is set to `false`.
 
+### Fixed
+
+* Don't fail to start up if `matrix.user_token` is not set (but password is).
+
 ### Removed
 
 * Removed the `power_to_write` override in the `rooms` database table. Rooms

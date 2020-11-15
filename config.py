@@ -64,8 +64,8 @@ class Config(object):
         if not re.match("@.*:.*", self.user_id):
             raise ConfigError("matrix.user_id must be in the form @name:domain")
 
-        self.user_token = self._get_cfg(["matrix", "user_token"])
-        self.user_password = self._get_cfg(["matrix", "user_password"])
+        self.user_token = self._get_cfg(["matrix", "user_token"], required=False, default=None)
+        self.user_password = self._get_cfg(["matrix", "user_password"], required=False, default=None)
         if not self.user_token and not self.user_password:
             raise ConfigError("Must supply either user token or password")
 
