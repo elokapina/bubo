@@ -63,7 +63,7 @@ rooms:
       "m.room.power_levels": 100
       "m.room.server_acl": 100
       "m.room.tombstone": 100
-    events_default": 0
+    events_default: 0
     invite: 0
     kick: 50
     redact: 50
