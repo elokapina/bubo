@@ -72,6 +72,11 @@ rooms:
   # Should bubo enforce the default power levels in old rooms as well?
   enforce_power_in_old_rooms: true
 
+# Configuration related to bot callbacks
+callbacks:
+  # Send a 'unable to decrypt this message' reply to the room if Bubo can't decrypt a message.
+  unable_to_decrypt_responses: true
+
 storage:
   # The path to the database
   database_filepath: "/data/bubo.db"

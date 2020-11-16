@@ -119,12 +119,12 @@ class Callbacks(object):
             f"it (your reminders will NOT be deleted, but the bot may respond to existing "
             f"commands a second time)."
         )
+        if self.config.callbacks.get("unable_to_decrypt_responses", True):
+            user_msg = (
+                "Unable to decrypt this message. "
+                "Check whether you've chosen to only encrypt to trusted devices."
+            )
 
-        user_msg = (
-            "Unable to decrypt this message. "
-            "Check whether you've chosen to only encrypt to trusted devices."
-        )
-
-        await send_text_to_room(
-            self.client, room.room_id, user_msg, reply_to_event_id=event.event_id,
-        )
+            await send_text_to_room(
+                self.client, room.room_id, user_msg, reply_to_event_id=event.event_id,
+            )

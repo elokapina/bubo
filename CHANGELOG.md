@@ -9,6 +9,9 @@
   overrides. By default, they will also be enforced on old rooms, unless
   `rooms.enforce_power_in_old_rooms` is set to `false`.
 
+* Add config option `callbacks.unable_to_decrypt_responses` to allow disabling
+  the room reply to messages that Bubo cannot decrypt.
+
 ### Fixed
 
 * Don't fail to start up if `matrix.user_token` is not set (but password is).

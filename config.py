@@ -95,6 +95,9 @@ class Config(object):
         # Rooms
         self.rooms = self._get_cfg(["rooms"], default={}, required=False)
 
+        # Callbacks
+        self.callbacks = self._get_cfg(["callbacks"], default={}, required=False)
+
     def _get_cfg(
             self,
             path: List[str],
