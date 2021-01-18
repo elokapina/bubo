@@ -2,15 +2,28 @@ import csv
 import logging
 
 # noinspection PyPackageRequirements
+from nio import RoomPutStateError
+# noinspection PyPackageRequirements
 from nio.schemas import check_user_id
 
 from chat_functions import send_text_to_room, invite_to_room
 from communities import ensure_community_exists
-from rooms import ensure_room_exists, create_breakout_room
+from rooms import ensure_room_exists, create_breakout_room, set_user_power
 
 logger = logging.getLogger(__name__)
 
 TEXT_PERMISSION_DENIED = "I'm afraid I cannot let you do that."
+
+HELP_POWER = """Set power level in a room. Usage:
+
+`power <user> <room> [<level>]`
+
+* `user` is the user ID, example `@user:example.tld`
+* `room` is a room alias or ID, example `#room:example.tld`. Bot must have power to give power there.
+* `level` is optional and defaults to `moderator`.
+
+Moderator rights can be given by coordinator level users. To give admin in a room, user must be admin of the bot.
+"""
 
 
 class Command(object):
@@ -69,6 +82,8 @@ class Command(object):
             await self._show_help()
         elif self.command.startswith("invite"):
             await self._invite()
+        elif self.command.startswith("power"):
+            await self._power()
         elif self.command.startswith("rooms"):
             await self._rooms()
         else:
@@ -214,6 +229,57 @@ class Command(object):
                     await invite_to_room(self.client, room_id, user_id, self.room.room_id, self.args[0])
             return
 
+    async def _power(self):
+        """Set power in a room.
+
+        Coordinators can set moderator power.
+        Admins can set also admin power.
+
+        # TODO this does not persist power in rooms maintained with the bot if
+        `permissions.demote_users` is set to True - need to make this
+        command also save the power in that case, unfortunately we don't yet have
+        a database table to track configured user power in rooms and might not
+        be adding such a feature anytime soon.
+        """
+        if not await self._ensure_coordinator():
+            return
+
+        if not self.args or self.args[0] == "help":
+            text = HELP_POWER
+        else:
+            try:
+                user_id = self.args[0]
+                room_id = self.args[1]
+                if room_id.startswith("#"):
+                    response = await self.client.room_resolve_alias(f"{room_id}")
+                    room_id = response.room_id
+            except AttributeError:
+                text = f"Could not resolve room ID. Please ensure room exists."
+            except IndexError:
+                text = f"Cannot understand arguments.\n\n{HELP_POWER}"
+            else:
+                try:
+                    level = self.args[2]
+                except IndexError:
+                    level = "moderator"
+                if level not in ("moderator", "admin"):
+                    text = f"Level must be 'moderator' or 'admin'."
+                else:
+                    if level == "admin" and not await self._ensure_admin():
+                        text = f"Only bot admins can set admin level power, sorry."
+                    else:
+                        power = {
+                            "admin": 100,
+                            "moderator": 50,
+                        }.get(level)
+                        response = await set_user_power(room_id, user_id, self.client, power)
+                        if isinstance(response, RoomPutStateError):
+                            text = f"Sorry, command failed.\n\n{response.message}"
+                        else:
+                            text = f"Power level was successfully set as requested."
+
+        await send_text_to_room(self.client, self.room.room_id, text)
+
     async def _show_help(self):
         """Show the help text"""
         if not self.args:
@@ -231,7 +297,8 @@ class Command(object):
                    "* breakout - Create a breakout room\n" \
                    "* communities - List and manage communities\n" \
                    "* invite - Invite one or more users to a room\n" \
-                   "* rooms - List and manage rooms" \
+                   "* power - Set power levels in rooms\n" \
+                   "* rooms - List and manage rooms\n" \
                    "\n" \
                    "More help on commands or subcommands using 'help' as the next parameter."
         else:

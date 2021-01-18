@@ -33,7 +33,7 @@ async def create_breakout_room(
         logger.info(f"Breakout room '{name}' created at {room_id}")
     else:
         raise Exception(f"Could not create breakout room: {response.message}, {response.status_code}")
-    await make_user_admin(room_id, created_by, client)
+    await set_user_power(room_id, created_by, client, 100)
     await invite_to_room(client, room_id, created_by)
     return room_id
 
@@ -187,13 +187,13 @@ async def ensure_room_exists(
     return "exists", None
 
 
-async def make_user_admin(room_id: str, user_id: str, client: AsyncClient):
+async def set_user_power(room_id: str, user_id: str, client: AsyncClient, power: int):
     """
-    Make a user an admin in the room.
+    Set user power in a room.
     """
-    logger.debug(f"Making user admin: {room_id}, user: {user_id}")
+    logger.debug(f"Setting user power: {room_id}, user: {user_id}, level: {power}")
     state = await client.room_get_state_event(room_id, "m.room.power_levels")
-    state.content["users"][user_id] = 100
+    state.content["users"][user_id] = power
     response = await with_ratelimit(
         client,
         "room_put_state",

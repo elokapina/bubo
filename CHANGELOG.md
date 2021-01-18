@@ -11,6 +11,9 @@
 
 * Add config option `callbacks.unable_to_decrypt_responses` to allow disabling
   the room reply to messages that Bubo cannot decrypt.
+  
+* Add command `power` to set power levels in a room where the bot has the 
+  required power.
 
 ### Fixed
 

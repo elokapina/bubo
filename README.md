@@ -113,6 +113,20 @@ Invite one or more users to a room maintained:
                    
     invite #room:example.com @user1:example.com @user2:example.org
 
+#### `power`
+
+Set power level in a room. Usage:
+
+    power <user> <room> [<level>]
+
+* `user` is the user ID, example `@user:example.tld`
+* `room` is a room alias or ID, example `#room:example.tld`. Bot must have power 
+  to give power there.
+* `level` is optional and defaults to `moderator`.
+
+Moderator rights can be given by coordinator level users. To give admin in a room, 
+user must be admin of the bot.
+
 #### `rooms`
 
 Maintains rooms.
