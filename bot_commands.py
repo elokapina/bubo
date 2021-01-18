@@ -109,10 +109,6 @@ class Command(object):
                        "but invites via reactions will not work.*"
                 await send_text_to_room(self.client, self.room.room_id, text)
 
-    async def _breakout_reaction(self):
-        # TODO implement
-        pass
-
     async def _communities(self):
         """List and operate on communities"""
         if not await self._ensure_coordinator():
