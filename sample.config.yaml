@@ -48,6 +48,24 @@ permissions:
   # Promote users who should have more power in a room
   promote_users: true
 
+# Configuration related to user management.
+# Currently Keycloak is the only provider.
+users:
+  provider:
+    # Future expansion, this is not checked yet for anything
+    # Please note you need to create a client in your keycloak realm, with the following:
+    # - client protocol: openid-connect
+    # - access type: confidential
+    # - service accounts enabled: true
+    # - service account roles -> client roles -> realm management: manage-users
+    # - service account roles -> client roles -> realm management: query-groups
+    # Then copy the credentials client secret here in 'client_secret_key'
+    type: keycloak
+    url: "http://keycloak.domain.tld/auth/"
+    # Define your realm
+    realm_name: "master"
+    client_secret_key: "client-secret"
+
 # Configuration for rooms maintained by Bubo.
 rooms:
   # Default power levels. Bubo will ensure these are set for the rooms

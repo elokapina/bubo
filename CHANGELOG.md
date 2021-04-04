@@ -14,6 +14,10 @@
   
 * Add command `power` to set power levels in a room where the bot has the 
   required power.
+  
+* Add command `users` to interact with an identity provider. Currently only Keycloak
+  is supported and the only functionality is to list usernames found in the configured
+  realm.
 
 ### Fixed
 
