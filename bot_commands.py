@@ -6,9 +6,11 @@ from nio import RoomPutStateError
 # noinspection PyPackageRequirements
 from nio.schemas import check_user_id
 
+import help_strings
 from chat_functions import send_text_to_room, invite_to_room
 from communities import ensure_community_exists
 from rooms import ensure_room_exists, create_breakout_room, set_user_power
+from users import list_users
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +88,8 @@ class Command(object):
             await self._power()
         elif self.command.startswith("rooms"):
             await self._rooms()
+        elif self.command.startswith("users"):
+            await self._users()
         else:
             await self._unknown_command()
 
@@ -378,3 +382,23 @@ class Command(object):
             self.room.room_id,
             f"Unknown command '{self.command}'. Try the 'help' command for more information.",
         )
+
+    async def _users(self):
+        """
+        Command to manage users.
+        """
+        if not await self._ensure_admin():
+            return
+        text = None
+        if self.args:
+            if self.args[0] == "list":
+                users = await list_users(self.config)
+                text = f"The following usernames were found: {', '.join([user['username'] for user in users])}"
+            elif self.args[0] == "help":
+                text = help_strings.HELP_USERS
+        else:
+            users = await list_users(self.config)
+            text = f"The following usernames were found: {', '.join([user['username'] for user in users])}"
+        if not text:
+            text = help_strings.HELP_USERS
+        await send_text_to_room(self.client, self.room.room_id, text)

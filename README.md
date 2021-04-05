@@ -152,6 +152,18 @@ ENCRYPTED and PUBLIC are either 'yes' or 'no'.
 
 Same as without a subcommand, Bubo will tell you all about the rooms it maintains.
 
+#### `users`
+
+Manage users of an identity provider.
+
+Currently [Keycloak](https://www.keycloak.org/) is the only identity provider supported.
+The `users` command requires `admin` level bot privileges and currently just lists the
+usernames in the configured realm. See `sample.config.yaml` for how to configure
+a Keycloak client.
+
+Future functionality will include registering users and sending them password reset
+emails, as some examples.
+
 ### Room power levels
 
 #### User power

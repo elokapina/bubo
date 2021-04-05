@@ -98,6 +98,9 @@ class Config(object):
         # Callbacks
         self.callbacks = self._get_cfg(["callbacks"], default={}, required=False)
 
+        # Users
+        self.users = self._get_cfg(["users"], default={}, required=False)
+
     def _get_cfg(
             self,
             path: List[str],
