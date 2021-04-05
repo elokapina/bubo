@@ -396,6 +396,20 @@ class Command(object):
                 text = f"The following usernames were found: {', '.join([user['username'] for user in users])}"
             elif self.args[0] == "help":
                 text = help_strings.HELP_USERS
+            elif self.args[0] == "invite":
+                if len(self.args) == 1 or self.args[1] == "help":
+                    text = help_strings.HELP_USERS_INVITE
+                else:
+                    emails = self.args[1:]
+                    emails = {email.strip() for email in emails}
+                    for email in emails:
+                        # TODO Validate
+                        # TODO Check for existing user
+                        # TODO Resolve a username from email, checking for dupes
+                        # TODO Create user
+                        # TODO Mark email verified
+                        # TODO Trigger password reset email
+                        pass
         else:
             users = await list_users(self.config)
             text = f"The following usernames were found: {', '.join([user['username'] for user in users])}"
