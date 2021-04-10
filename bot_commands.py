@@ -1,6 +1,8 @@
 import csv
 import logging
+import re
 
+from email_validator import validate_email, EmailNotValidError
 # noinspection PyPackageRequirements
 from nio import RoomPutStateError
 # noinspection PyPackageRequirements
@@ -10,7 +12,7 @@ import help_strings
 from chat_functions import send_text_to_room, invite_to_room
 from communities import ensure_community_exists
 from rooms import ensure_room_exists, create_breakout_room, set_user_power
-from users import list_users
+from users import list_users, get_user_by_attr, create_user, send_password_reset
 
 logger = logging.getLogger(__name__)
 
@@ -392,12 +394,66 @@ class Command(object):
         text = None
         if self.args:
             if self.args[0] == "list":
-                users = await list_users(self.config)
+                users = list_users(self.config)
                 text = f"The following usernames were found: {', '.join([user['username'] for user in users])}"
             elif self.args[0] == "help":
                 text = help_strings.HELP_USERS
+            elif self.args[0] == "invite":
+                if len(self.args) == 1 or self.args[1] == "help":
+                    text = help_strings.HELP_USERS_INVITE
+                else:
+                    emails = self.args[1:]
+                    emails = {email.strip() for email in emails}
+                    texts = []
+                    for email in emails:
+                        try:
+                            validated = validate_email(email)
+                            email = validated.email
+                            logger.debug("users invite - Email %s is valid", email)
+                        except EmailNotValidError as ex:
+                            texts.append(f"The email {email} looks invalid: {ex}")
+                            continue
+                        try:
+                            existing_user = get_user_by_attr(self.config, "email", email)
+                        except Exception as ex:
+                            texts.append(f"Error looking up existing users by email {email}: {ex}")
+                            continue
+                        if existing_user:
+                            texts.append(f"Found an existing user by email {email} - ignoring")
+                            continue
+                        logger.debug("users invite - No existing user for %s found", email)
+                        username = None
+                        username_candidate = email.split('@')[0]
+                        username_candidate = username_candidate.lower()
+                        username_candidate = re.sub(r'[^a-z0-9._\-]', '', username_candidate)
+                        candidate = username_candidate
+                        counter = 0
+                        while not username:
+                            logger.debug("users invite - candidate: %s", candidate)
+                            # noinspection PyBroadException
+                            try:
+                                existing_user = get_user_by_attr(self.config, "username", candidate)
+                            except Exception:
+                                existing_user = True
+                            if existing_user:
+                                logger.debug("users invite - Found existing user with candidate %s", existing_user)
+                                counter += 1
+                                candidate = f"{username_candidate}{counter}"
+                                continue
+                            username = candidate
+                            logger.debug("Username is %s", username)
+                        user_id = create_user(self.config, username, email)
+                        logger.debug("Created user: %s", user_id)
+                        if not user_id:
+                            texts.append(f"Failed to create user for email {email}")
+                            logger.warning("users invite - Failed to create user for email %s", email)
+                            continue
+                        send_password_reset(self.config, user_id)
+                        logger.info("users invite - Successfully invited user with email %s", email)
+                        texts.append(f"Successfully invited {email}!")
+                    text = '\n'.join(texts)
         else:
-            users = await list_users(self.config)
+            users = list_users(self.config)
             text = f"The following usernames were found: {', '.join([user['username'] for user in users])}"
         if not text:
             text = help_strings.HELP_USERS
