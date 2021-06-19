@@ -161,8 +161,16 @@ The `users` command requires `admin` level bot privileges and currently just lis
 usernames in the configured realm. See `sample.config.yaml` for how to configure
 a Keycloak client.
 
-Future functionality will include registering users and sending them password reset
-emails, as some examples.
+Subcommands:
+
+* `list` (or no subcommand)
+
+List currently registered users.
+
+* `invite`
+
+Creates users for the given emails and sends them a password reset email. The users
+email will be marked as verified. Give one or more emails as parameters.
 
 ### Room power levels
 
