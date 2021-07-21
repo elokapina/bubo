@@ -98,8 +98,14 @@ class Config(object):
         # Callbacks
         self.callbacks = self._get_cfg(["callbacks"], default={}, required=False)
 
-        # Users
-        self.users = self._get_cfg(["users"], default={}, required=False)
+        # Keycloak
+        self.keycloak = self._get_cfg(["users", "keycloak"], default={}, required=False)
+        self.keycloak_signup = self._get_cfg(["users", "keycloak", "keycloak_signup"], default={}, required=False)
+
+        # Email
+        self.email = self._get_cfg(["email"], default={}, required=False)
+        if self.email and self.email.get("starttls") and self.email.get("ssl"):
+            raise ConfigError("Cannot enable both starttls and ssl for email")
 
     def _get_cfg(
             self,

@@ -51,8 +51,9 @@ permissions:
 # Configuration related to user management.
 # Currently Keycloak is the only provider.
 users:
-  provider:
-    # Future expansion, this is not checked yet for anything
+  keycloak:
+    # Set to true to enable keycloak integration
+    enabled: false
     # Please note you need to create a client in your keycloak realm, with the following:
     # - client protocol: openid-connect
     # - access type: confidential
@@ -60,11 +61,23 @@ users:
     # - service account roles -> client roles -> realm management: manage-users
     # - service account roles -> client roles -> realm management: query-groups
     # Then copy the credentials client secret here in 'client_secret_key'
-    type: keycloak
     url: "http://keycloak.domain.tld/auth/"
     # Define your realm
     realm_name: "master"
     client_secret_key: "client-secret"
+    # If running an instance of https://github.com/elokapina/keycloak-signup
+    # you can enable the "invite" command for self-registration.
+    keycloak_signup:
+      # Set to true to enable self-registration integration
+      # NOTE! Requires email sending to be enabled
+      enabled: false
+      url: "https://keycloak-signup.domain.tld"
+      # Secret token to communicate with the keycloak-signup instance
+      secret: "abcdefg"
+      # How many days a self-registration page should be valid
+      page_days_valid: 7
+      # What organisation name to use in the emails to user
+      organisation: Elokapina
 
 # Configuration for rooms maintained by Bubo.
 rooms:
@@ -95,6 +108,21 @@ callbacks:
   # Send a 'unable to decrypt this message' reply to the room if Bubo can't decrypt a message.
   unable_to_decrypt_responses: true
 
+# Email sending configuration
+email:
+  # Enable first if email sending is required
+  enabled: false
+  host: smtp.example.com
+  port: 465
+  # Set either starttls or ssl, not both
+  starttls: false
+  ssl: false
+  sender: noreply@example.com
+  auth:
+    username: janet
+    password: foobar
+
+# Storage related configuration
 storage:
   # The path to the database
   database_filepath: "/data/bubo.db"
