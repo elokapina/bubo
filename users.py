@@ -38,7 +38,7 @@ def invite_user(config: Config, email: str, creator: str):
     # Create page
     response = requests.post(
         f"{config.keycloak_signup.get('url')}/api/pages",
-        data={
+        json={
             "creator": creator,
             "maxSignups": 1,
             "validDays": config.keycloak_signup.get("page_valid_days"),
