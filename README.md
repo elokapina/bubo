@@ -157,20 +157,19 @@ Same as without a subcommand, Bubo will tell you all about the rooms it maintain
 Manage users of an identity provider.
 
 Currently [Keycloak](https://www.keycloak.org/) is the only identity provider supported.
-The `users` command requires `admin` level bot privileges and currently just lists the
-usernames in the configured realm. See `sample.config.yaml` for how to configure
+See `sample.config.yaml` for how to configure
 a Keycloak client.
 
 Subcommands:
 
 * `list` (or no subcommand)
 
-List currently registered users.
+List currently registered users. Requires admin level permissions.
 
-* `invite`
+* `create`
 
 Creates users for the given emails and sends them a password reset email. The users
-email will be marked as verified. Give one or more emails as parameters.
+email will be marked as verified. Give one or more emails as parameters. Requires admin level permissions.
 
 ### Room power levels
 

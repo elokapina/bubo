@@ -398,9 +398,9 @@ class Command(object):
                 text = f"The following usernames were found: {', '.join([user['username'] for user in users])}"
             elif self.args[0] == "help":
                 text = help_strings.HELP_USERS
-            elif self.args[0] == "invite":
+            elif self.args[0] == "create":
                 if len(self.args) == 1 or self.args[1] == "help":
-                    text = help_strings.HELP_USERS_INVITE
+                    text = help_strings.HELP_USERS_CREATE
                 else:
                     emails = self.args[1:]
                     emails = {email.strip() for email in emails}
@@ -409,7 +409,7 @@ class Command(object):
                         try:
                             validated = validate_email(email)
                             email = validated.email
-                            logger.debug("users invite - Email %s is valid", email)
+                            logger.debug("users create - Email %s is valid", email)
                         except EmailNotValidError as ex:
                             texts.append(f"The email {email} looks invalid: {ex}")
                             continue
@@ -421,7 +421,7 @@ class Command(object):
                         if existing_user:
                             texts.append(f"Found an existing user by email {email} - ignoring")
                             continue
-                        logger.debug("users invite - No existing user for %s found", email)
+                        logger.debug("users create - No existing user for %s found", email)
                         username = None
                         username_candidate = email.split('@')[0]
                         username_candidate = username_candidate.lower()
@@ -429,14 +429,14 @@ class Command(object):
                         candidate = username_candidate
                         counter = 0
                         while not username:
-                            logger.debug("users invite - candidate: %s", candidate)
+                            logger.debug("users create - candidate: %s", candidate)
                             # noinspection PyBroadException
                             try:
                                 existing_user = get_user_by_attr(self.config, "username", candidate)
                             except Exception:
                                 existing_user = True
                             if existing_user:
-                                logger.debug("users invite - Found existing user with candidate %s", existing_user)
+                                logger.debug("users create - Found existing user with candidate %s", existing_user)
                                 counter += 1
                                 candidate = f"{username_candidate}{counter}"
                                 continue
@@ -446,11 +446,11 @@ class Command(object):
                         logger.debug("Created user: %s", user_id)
                         if not user_id:
                             texts.append(f"Failed to create user for email {email}")
-                            logger.warning("users invite - Failed to create user for email %s", email)
+                            logger.warning("users create - Failed to create user for email %s", email)
                             continue
                         send_password_reset(self.config, user_id)
-                        logger.info("users invite - Successfully invited user with email %s", email)
-                        texts.append(f"Successfully invited {email}!")
+                        logger.info("users create - Successfully create user with email %s", email)
+                        texts.append(f"Successfully create {email}!")
                     text = '\n'.join(texts)
         else:
             users = list_users(self.config)

@@ -16,8 +16,8 @@
   required power.
   
 * Add command `users` to interact with an identity provider. Currently only Keycloak
-  is supported. Currently supported features is listing users and inviting new users.
-  Invited users will be sent a password reset email and their email will be
+  is supported. Currently, supported features is listing users and creating new users.
+  Created users will be sent a password reset email, and their email will be
   marked as verified.
 
 ### Fixed
