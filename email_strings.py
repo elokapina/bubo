@@ -1,4 +1,6 @@
-INVITE_LINK_EMAIL = """Hi!
+INVITE_LINK_EMAIL = """Subject: Invitation to register at %%organisation%%
+
+Hi!
 
 You've been invited to signup for an %%organisation%% account. Please go to the following url to signup: %%link%%
 
