@@ -6,7 +6,7 @@ import requests
 from keycloak import KeycloakAdmin
 
 from config import Config
-from email import send_plain_email
+from emails import send_plain_email
 from email_strings import INVITE_LINK_EMAIL
 
 
