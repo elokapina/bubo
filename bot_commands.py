@@ -478,6 +478,7 @@ class Command(object):
                     except Exception as ex:
                         logger.error("users invite - error sending invite to user: %s", ex)
                         texts.append(f"Error inviting {email}, please see logs.")
+                        continue
                     logger.debug("users invite - Invited user: %s", email)
                     texts.append(f"Successfully invited {email}!")
                 text = '\n'.join(texts)
