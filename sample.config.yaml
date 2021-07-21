@@ -73,7 +73,7 @@ users:
       enabled: false
       url: "https://keycloak-signup.domain.tld"
       # Secret token to communicate with the keycloak-signup instance
-      secret: "abcdefg"
+      token: "abcdefg"
       # How many days a self-registration page should be valid
       page_days_valid: 7
       # What organisation name to use in the emails to user
