@@ -54,7 +54,7 @@ def invite_user(config: Config, email: str, creator: str):
     message = INVITE_LINK_EMAIL \
         .replace("%%organisation%%", config.keycloak_signup.get("organisation")) \
         .replace("%%link%%", invite_link) \
-        .replace("%%days%%", config.keycloak_signup.get("page_days_valid"))
+        .replace("%%days%%", str(config.keycloak_signup.get("page_days_valid")))
     send_plain_email(config, email, message)
 
 
