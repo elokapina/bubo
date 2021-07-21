@@ -50,10 +50,10 @@ def invite_user(config: Config, email: str, creator: str):
     )
     response.raise_for_status()
     # Send invite link
-    invite_link = response.json().get("signup_token")
+    signup_token = response.json().get("signup_token")
     message = INVITE_LINK_EMAIL \
         .replace("%%organisation%%", config.keycloak_signup.get("organisation")) \
-        .replace("%%link%%", invite_link) \
+        .replace("%%link%%", f"{config.keycloak_signup.get('url')}/{signup_token}") \
         .replace("%%days%%", str(config.keycloak_signup.get("page_days_valid")))
     send_plain_email(config, email, message)
 
