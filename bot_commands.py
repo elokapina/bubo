@@ -389,18 +389,20 @@ class Command(object):
         """
         Command to manage users.
         """
-        if not await self._ensure_admin():
-            return
         if not self.config.keycloak.get("enabled"):
             return await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_USERS_KEYCLOAK_DISABLED)
         text = None
         if self.args:
             if self.args[0] == "list":
+                if not await self._ensure_admin():
+                    return
                 users = list_users(self.config)
                 text = f"The following usernames were found: {', '.join([user['username'] for user in users])}"
             elif self.args[0] == "help":
                 text = help_strings.HELP_USERS
             elif self.args[0] == "create":
+                if not await self._ensure_admin():
+                    return
                 if len(self.args) == 1 or self.args[1] == "help":
                     text = help_strings.HELP_USERS_CREATE
                 else:
@@ -455,6 +457,8 @@ class Command(object):
                         texts.append(f"Successfully create {email}!")
                     text = '\n'.join(texts)
             elif self.args[0] == "invite":
+                if not await self._ensure_coordinator():
+                    return
                 if not self.config.keycloak_signup.get("enabled"):
                     return await send_text_to_room(
                         self.client, self.room.room_id, help_strings.HELP_USERS_KEYCLOAK_DISABLED,
@@ -483,6 +487,8 @@ class Command(object):
                     texts.append(f"Successfully invited {email}!")
                 text = '\n'.join(texts)
         else:
+            if not await self._ensure_admin():
+                return
             users = list_users(self.config)
             text = f"The following usernames were found: {', '.join([user['username'] for user in users])}"
         if not text:
