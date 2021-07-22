@@ -510,7 +510,7 @@ class Command(object):
                     text = "Error creating signup link. Please contact an administrator."
                 else:
                     logger.info(f"Successfully created signup link requested by {self.event.sender}")
-                    text = f"Signup link created for {max_signups} signups with a validity of {days_valid}. " \
+                    text = f"Signup link created for {max_signups} signups with a validity of {days_valid} days. " \
                            f"The link is {signup_link}"
         else:
             if not await self._ensure_admin():
