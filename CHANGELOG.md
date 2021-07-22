@@ -15,10 +15,11 @@
 * Add command `power` to set power levels in a room where the bot has the 
   required power.
   
-* Add command `users` to interact with an identity provider. Currently only Keycloak
-  is supported. Currently, supported features is listing users and creating new users.
+* Add command `users` to interact with an identity provider. Currently, only Keycloak
+  is supported. Supported features is listing, creating and inviting new users.
   Created users will be sent a password reset email, and their email will be
-  marked as verified.
+  marked as verified. Invitation allows the invited user to choose their own username.
+  Note, the invite command requires an instance of [keycloak-signup](https://github.com/elokapina/keycloak-signup).
 
 ### Fixed
 

@@ -12,7 +12,7 @@ import help_strings
 from chat_functions import send_text_to_room, invite_to_room
 from communities import ensure_community_exists
 from rooms import ensure_room_exists, create_breakout_room, set_user_power
-from users import list_users, get_user_by_attr, create_user, send_password_reset
+from users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user
 
 logger = logging.getLogger(__name__)
 
@@ -389,16 +389,20 @@ class Command(object):
         """
         Command to manage users.
         """
-        if not await self._ensure_admin():
-            return
+        if not self.config.keycloak.get("enabled"):
+            return await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_USERS_KEYCLOAK_DISABLED)
         text = None
         if self.args:
             if self.args[0] == "list":
+                if not await self._ensure_admin():
+                    return
                 users = list_users(self.config)
                 text = f"The following usernames were found: {', '.join([user['username'] for user in users])}"
             elif self.args[0] == "help":
                 text = help_strings.HELP_USERS
             elif self.args[0] == "create":
+                if not await self._ensure_admin():
+                    return
                 if len(self.args) == 1 or self.args[1] == "help":
                     text = help_strings.HELP_USERS_CREATE
                 else:
@@ -452,7 +456,39 @@ class Command(object):
                         logger.info("users create - Successfully create user with email %s", email)
                         texts.append(f"Successfully create {email}!")
                     text = '\n'.join(texts)
+            elif self.args[0] == "invite":
+                if not await self._ensure_coordinator():
+                    return
+                if not self.config.keycloak_signup.get("enabled"):
+                    return await send_text_to_room(
+                        self.client, self.room.room_id, help_strings.HELP_USERS_KEYCLOAK_SIGNUP_DISABLED,
+                    )
+                if len(self.args) == 1 or self.args[1] == "help":
+                    return await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_USERS_INVITE)
+                emails = self.args[1:]
+                emails = {email.strip() for email in emails}
+                texts = []
+                for email in emails:
+                    try:
+                        validated = validate_email(email)
+                        email = validated.email
+                        logger.debug("users invite - Email %s is valid", email)
+                    except EmailNotValidError as ex:
+                        texts.append(f"The email {email} looks invalid: {ex}")
+                        continue
+
+                    try:
+                        invite_user(self.config, email, self.event.sender)
+                    except Exception as ex:
+                        logger.error("users invite - error sending invite to user: %s", ex)
+                        texts.append(f"Error inviting {email}, please see logs.")
+                        continue
+                    logger.debug("users invite - Invited user: %s", email)
+                    texts.append(f"Successfully invited {email}!")
+                text = '\n'.join(texts)
         else:
+            if not await self._ensure_admin():
+                return
             users = list_users(self.config)
             text = f"The following usernames were found: {', '.join([user['username'] for user in users])}"
         if not text:
