@@ -461,7 +461,7 @@ class Command(object):
                     return
                 if not self.config.keycloak_signup.get("enabled"):
                     return await send_text_to_room(
-                        self.client, self.room.room_id, help_strings.HELP_USERS_KEYCLOAK_DISABLED,
+                        self.client, self.room.room_id, help_strings.HELP_USERS_KEYCLOAK_SIGNUP_DISABLED,
                     )
                 if len(self.args) == 1 or self.args[1] == "help":
                     return await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_USERS_INVITE)
