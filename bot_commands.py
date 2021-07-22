@@ -12,7 +12,7 @@ import help_strings
 from chat_functions import send_text_to_room, invite_to_room
 from communities import ensure_community_exists
 from rooms import ensure_room_exists, create_breakout_room, set_user_power
-from users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user
+from users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
 
 logger = logging.getLogger(__name__)
 
@@ -486,6 +486,32 @@ class Command(object):
                     logger.debug("users invite - Invited user: %s", email)
                     texts.append(f"Successfully invited {email}!")
                 text = '\n'.join(texts)
+            elif self.args[0] == "signuplink":
+                if not await self._ensure_coordinator():
+                    return
+                if not self.config.keycloak_signup.get("enabled"):
+                    return await send_text_to_room(
+                        self.client, self.room.room_id, help_strings.HELP_USERS_KEYCLOAK_SIGNUP_DISABLED,
+                    )
+                if len(self.args) < 3 or self.args[1] == "help":
+                    return await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_USERS_SIGNUPLINK)
+                try:
+                    max_signups = int(self.args[1])
+                    days_valid = int(self.args[2])
+                    if max_signups < 1 or days_valid < 1:
+                        raise ValueError
+                except ValueError:
+                    return await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_USERS_SIGNUPLINK)
+                # noinspection PyBroadException
+                try:
+                    signup_link = create_signup_link(self.config, self.event.sender, max_signups, days_valid)
+                except Exception as ex:
+                    logger.error("Failed to create signup link: %s", ex)
+                    text = "Error creating signup link. Please contact an administrator."
+                else:
+                    logger.info(f"Successfully created signup link requested by {self.event.sender}")
+                    text = f"Signup link created for {max_signups} signups with a validity of {days_valid}. " \
+                           f"The link is {signup_link}"
         else:
             if not await self._ensure_admin():
                 return

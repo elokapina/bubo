@@ -19,7 +19,10 @@
   is supported. Supported features is listing, creating and inviting new users.
   Created users will be sent a password reset email, and their email will be
   marked as verified. Invitation allows the invited user to choose their own username.
-  Note, the invite command requires an instance of [keycloak-signup](https://github.com/elokapina/keycloak-signup).
+  Support also exists for creating self-service signup links.
+
+  Note, the invite and self-service signup link creation commands 
+  require an instance of [keycloak-signup](https://github.com/elokapina/keycloak-signup).
 
 ### Fixed
 

@@ -8,6 +8,7 @@ from keycloak import KeycloakAdmin
 from config import Config
 from emails import send_plain_email
 from email_strings import INVITE_LINK_EMAIL
+from errors import ConfigError
 
 
 def get_admin_client(config: Config) -> KeycloakAdmin:
@@ -18,6 +19,26 @@ def get_admin_client(config: Config) -> KeycloakAdmin:
         "verify": True,
     }
     return KeycloakAdmin(**params)
+
+
+def create_signup_link(config: Config, creator: str, max_signups: int, days_valid: int) -> str:
+    if not config.keycloak_signup.get('enabled'):
+        raise ConfigError("Keycloak-Signup not configured")
+    response = requests.post(
+        f"{config.keycloak_signup.get('url')}/api/pages",
+        json={
+            "creator": creator,
+            "maxSignups": max_signups,
+            "validDays": days_valid,
+            "token": config.keycloak_signup.get("token"),
+        },
+        headers={
+            "Content-Type": "application/json",
+        },
+    )
+    response.raise_for_status()
+    signup_token = response.json().get("signup_token")
+    return f"{config.keycloak_signup.get('url')}/{signup_token}"
 
 
 def create_user(config: Config, username: str, email: str) -> Optional[str]:

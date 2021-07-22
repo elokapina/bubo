@@ -176,6 +176,13 @@ Subcommands:
   an instance of [keycloak-signup](https://github.com/elokapina/keycloak-signup).
   The invitation will contain a one-time link valid for 7 days. Requires coordinator level permissions.
 
+* `signuplink`
+
+  Create a self-service signup link with a chosen amount of maximum signups
+  and days of validity. Requires an instance of 
+  [keycloak-signup](https://github.com/elokapina/keycloak-signup).
+  Requires coordinator level permissions.
+
 ### Room power levels
 
 #### User power
