@@ -1,16 +1,15 @@
 import logging
 import time
 from copy import deepcopy
-
 from typing import Tuple, Optional, List, Dict
 
 # noinspection PyPackageRequirements
 from nio import AsyncClient, RoomVisibility, EnableEncryptionBuilder, RoomPutStateError
 
-from chat_functions import invite_to_room
-from config import Config
-from storage import Storage
-from utils import with_ratelimit
+from bubo.chat_functions import invite_to_room
+from bubo.config import Config
+from bubo.storage import Storage
+from bubo.utils import with_ratelimit
 
 logger = logging.getLogger(__name__)
 

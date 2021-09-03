@@ -1,5 +1,6 @@
-from chat_functions import send_text_to_room
 import logging
+
+from bubo.chat_functions import send_text_to_room
 
 logger = logging.getLogger(__name__)
 

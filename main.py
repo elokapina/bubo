@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-
 import logging
-import asyncio
 import sys
 from time import sleep
+
+import asyncio
+# noinspection PyPackageRequirements
+from aiohttp import (
+    ServerDisconnectedError,
+    ClientConnectionError
+)
 # noinspection PyPackageRequirements
 from nio import (
     AsyncClient,
@@ -15,16 +20,12 @@ from nio import (
     MegolmEvent,
     UnknownEvent,
 )
-# noinspection PyPackageRequirements
-from aiohttp import (
-    ServerDisconnectedError,
-    ClientConnectionError
-)
-from callbacks import Callbacks
-from communities import maintain_configured_communities
-from config import Config
-from rooms import maintain_configured_rooms
-from storage import Storage
+
+from bubo.callbacks import Callbacks
+from bubo.communities import maintain_configured_communities
+from bubo.config import Config
+from bubo.rooms import maintain_configured_rooms
+from bubo.storage import Storage
 
 logger = logging.getLogger(__name__)
 

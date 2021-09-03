@@ -8,7 +8,7 @@ from typing import List, Any
 # noinspection PyPackageRequirements
 from nio.schemas import check_user_id
 
-from errors import ConfigError
+from bubo.errors import ConfigError
 
 logger = logging.getLogger()
 logging.getLogger("peewee").setLevel(

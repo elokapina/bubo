@@ -1,7 +1,8 @@
-import sqlite3
 import logging
 from importlib import import_module
 from typing import Optional
+
+import sqlite3
 
 latest_db_version = 7
 
@@ -57,7 +58,7 @@ class Storage(object):
         while version < latest_db_version:
             version += 1
             version_string = str(version).rjust(3, "0")
-            migration = import_module(f"migrations.{version_string}")
+            migration = import_module(f"bubo.migrations.{version_string}")
             # noinspection PyUnresolvedReferences
             migration.forward(self.cursor)
             logger.info(f"Executing database migration {version_string}")

@@ -3,8 +3,8 @@ from typing import Tuple, Optional
 
 import requests
 
-from config import Config
-from storage import Storage
+from bubo.config import Config
+from bubo.storage import Storage
 
 logger = logging.getLogger(__name__)
 

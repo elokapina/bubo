@@ -1,7 +1,7 @@
 import smtplib
 import ssl
 
-from config import Config
+from bubo.config import Config
 
 
 def send_plain_email(config: Config, receiver: str, message: str):

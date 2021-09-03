@@ -1,9 +1,9 @@
-from bot_commands import Command
 # noinspection PyPackageRequirements
 from nio import JoinError
 
-from chat_functions import send_text_to_room, invite_to_room
-from message_responses import Message
+from bubo.bot_commands import Command
+from bubo.chat_functions import send_text_to_room, invite_to_room
+from bubo.message_responses import Message
 
 import logging
 logger = logging.getLogger(__name__)

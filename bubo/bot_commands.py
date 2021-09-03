@@ -8,11 +8,11 @@ from nio import RoomPutStateError
 # noinspection PyPackageRequirements
 from nio.schemas import check_user_id
 
-import help_strings
-from chat_functions import send_text_to_room, invite_to_room
-from communities import ensure_community_exists
-from rooms import ensure_room_exists, create_breakout_room, set_user_power
-from users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
+from bubo import help_strings
+from bubo.chat_functions import send_text_to_room, invite_to_room
+from bubo.communities import ensure_community_exists
+from bubo.rooms import ensure_room_exists, create_breakout_room, set_user_power
+from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
 
 logger = logging.getLogger(__name__)
 

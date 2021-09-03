@@ -75,11 +75,10 @@ COPY --from=builder /usr/local/lib/libolm* /usr/local/lib/
 RUN apk add --no-cache \
     libstdc++
 
-RUN mkdir -p /app/migrations
 WORKDIR /app
 
 # Copy app files
 COPY *.py *.md /app/
-COPY migrations/*.py migrations/
+COPY bubo/ /app/bubo/
 
 CMD python main.py /config/config.yaml

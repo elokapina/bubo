@@ -5,10 +5,10 @@ import requests
 # noinspection PyPackageRequirements
 from keycloak import KeycloakAdmin
 
-from config import Config
-from emails import send_plain_email
-from email_strings import INVITE_LINK_EMAIL
-from errors import ConfigError
+from bubo.config import Config
+from bubo.emails import send_plain_email
+from bubo.email_strings import INVITE_LINK_EMAIL
+from bubo.errors import ConfigError
 
 
 def get_admin_client(config: Config) -> KeycloakAdmin:
