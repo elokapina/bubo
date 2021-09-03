@@ -3,6 +3,7 @@ import logging
 import sys
 from time import sleep
 
+import aiolog
 import asyncio
 # noinspection PyPackageRequirements
 from aiohttp import (
@@ -30,16 +31,7 @@ from bubo.storage import Storage
 logger = logging.getLogger(__name__)
 
 
-async def main():
-    # Read config file
-
-    # A different config file path can be specified as the first command line argument
-    if len(sys.argv) > 1:
-        config_filepath = sys.argv[1]
-    else:
-        config_filepath = "config.yaml"
-    config = Config(config_filepath)
-
+async def main(config: Config):
     # Configure the database
     store = Storage(config.database_filepath)
 
@@ -127,4 +119,14 @@ async def main():
             # Make sure to close the client connection on disconnect
             await client.close()
 
-asyncio.get_event_loop().run_until_complete(main())
+# Read config file
+# A different config file path can be specified as the first command line argument
+if len(sys.argv) > 1:
+    config_filepath = sys.argv[1]
+else:
+    config_filepath = "config.yaml"
+config_file = Config(config_filepath)
+
+aiolog.start()
+
+asyncio.get_event_loop().run_until_complete(main(config_file)).run_util_complete(aiolog.stop())

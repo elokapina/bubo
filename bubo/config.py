@@ -5,6 +5,7 @@ import yaml
 import sys
 from typing import List, Any
 
+from aiolog import matrix
 # noinspection PyPackageRequirements
 from nio.schemas import check_user_id
 
@@ -75,6 +76,20 @@ class Config(object):
         self.server_name = self._get_cfg(["matrix", "server_name"], required=True)
 
         self.command_prefix = self._get_cfg(["command_prefix"], default="!c") + " "
+
+        matrix_logging_enabled = self._get_cfg(["logging", "matrix_logging", "enabled"], default=False)
+        if matrix_logging_enabled:
+            if not self.user_token:
+                logger.warning("Not setting up Matrix logging - requires user access token to be set")
+            else:
+                matrix_logging_room = self._get_cfg(["logging", "matrix_logging", "room"], required=True)
+                handler = matrix.Handler(
+                    homeserver_url=self.homeserver_url,
+                    access_token=self.user_token,
+                    room_id=matrix_logging_room,
+                )
+                handler.setFormatter(formatter)
+                logger.addHandler(handler)
 
         # Permissions
         self.admins = self._get_cfg(["permissions", "admins"], default=[])

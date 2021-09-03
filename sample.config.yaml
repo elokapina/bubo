@@ -145,3 +145,9 @@ logging:
   console_logging:
     # Whether logging to the console is enabled
     enabled: true
+  matrix_logging:
+    # Whether logging to Matrix is enabled.
+    # Note! User access token must be specified when using Matrix logging.
+    enabled: false
+    # Room ID
+    room: !logs:example.com

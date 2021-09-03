@@ -24,6 +24,9 @@
   Note, the invite and self-service signup link creation commands 
   require an instance of [keycloak-signup](https://github.com/elokapina/keycloak-signup).
 
+* Logging to a Matrix room is now possible. User access token must be set for the logging
+  to be used.
+
 ### Changed
 
 * Message edits are now understood as new commands from clients that send them 
