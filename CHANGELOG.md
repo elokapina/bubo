@@ -24,6 +24,11 @@
   Note, the invite and self-service signup link creation commands 
   require an instance of [keycloak-signup](https://github.com/elokapina/keycloak-signup).
 
+### Changed
+
+* Message edits are now understood as new commands from clients that send them 
+  prefixed with ` * ` (for example Element).
+
 ### Fixed
 
 * Don't fail to start up if `matrix.user_token` is not set (but password is).
