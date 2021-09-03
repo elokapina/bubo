@@ -1,4 +1,4 @@
--e git://github.com/jaywink/aiolog.git@matrix-handler#egg=aiolog
+git+https://github.com/jaywink/aiolog.git@matrix-handler#egg=aiolog
 aiohttp
 email-validator>=1.1.2
 matrix-nio[e2e]>=0.18.0
