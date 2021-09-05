@@ -279,10 +279,18 @@ class Command(object):
                             "moderator": 50,
                         }.get(level)
                         response = await set_user_power(room_id, user_id, self.client, power)
-                        if isinstance(response, RoomPutStateError):
+                        if isinstance(response, (RoomPutStateError, RoomGetStateEventError)):
                             text = f"Sorry, command failed.\n\n{response.message}"
-                        else:
+                        elif isinstance(response, RoomPutStateResponse):
                             text = f"Power level was successfully set as requested."
+                        elif isinstance(response, int):
+                            if response == 403:
+                                text = f"Failed to set power level - no permissions to do so or not in room."
+                            else:
+                                text = f"Failed to set power level - error code {response}."
+                        else:
+                            logger.warning(f"Got unexpected set_user_power response: {response}")
+                            text = f"Unknown power level response, please consult the logs."
 
         await send_text_to_room(self.client, self.room.room_id, text)
 

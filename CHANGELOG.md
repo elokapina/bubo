@@ -36,6 +36,8 @@
 
 * Don't fail to start up if `matrix.user_token` is not set (but password is).
 
+* Don't crash in `set_user_power` if bot not in room. 
+
 ### Removed
 
 * Removed the `power_to_write` override in the `rooms` database table. Rooms
