@@ -288,28 +288,7 @@ class Command(object):
 
     async def _show_help(self):
         """Show the help text"""
-        if not self.args:
-            text = ("Hello, I'm Bubo, a bot made with matrix-nio! Use `help commands` to view "
-                    "available commands.\n"
-                    "\n"
-                    "For source code, see https://github.com/elokapina/bubo")
-            await send_text_to_room(self.client, self.room.room_id, text)
-            return
-
-        topic = self.args[0]
-        if topic == "commands":
-            text = "Available commands:\n" \
-                   "\n" \
-                   "* breakout - Create a breakout room\n" \
-                   "* communities - List and manage communities\n" \
-                   "* invite - Invite one or more users to a room\n" \
-                   "* power - Set power levels in rooms\n" \
-                   "* rooms - List and manage rooms\n" \
-                   "\n" \
-                   "More help on commands or subcommands using 'help' as the next parameter."
-        else:
-            text = "Unknown help topic!"
-        await send_text_to_room(self.client, self.room.room_id, text)
+        await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_HELP)
 
     async def _rooms(self):
         """List and operate on rooms"""

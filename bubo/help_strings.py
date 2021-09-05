@@ -1,3 +1,19 @@
+HELP_HELP = """Hello, I'm Bubo, a bot made with matrix-nio!
+
+Available commands:
+
+* breakout - Create a breakout room
+* communities - List and manage communities
+* invite - Invite one or more users to a room
+* power - Set power levels in rooms
+* rooms - List and manage rooms
+* users - List and manage users and signup links
+                   
+More help on commands or subcommands using 'help' as the next parameter.
+                   
+For source code, see https://github.com/elokapina/bubo
+"""
+
 HELP_USERS = """List or manage users.
 
 Without any subcommands, lists users. Other subcommands:
