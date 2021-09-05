@@ -27,6 +27,10 @@
 * Logging to a Matrix room is now possible. User access token must be set for the logging
   to be used.
 
+* Allow configuring admins and coordinators based on room membership. Both config lists
+  now accept a room ID whose members will be added as admins or coordinators when checking
+  access rights for commands or when setting power levels in rooms.
+
 ### Changed
 
 * Message edits are now understood as new commands from clients that send them 

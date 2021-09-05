@@ -30,18 +30,23 @@ matrix:
 # - "rooms" - listing or maintaining rooms: coordinator
 # - "invite" - invite a user to a room: coordinator
 permissions:
-  # Users who are allowed to do anything with the bot
+  # Users or list of users based on room membership, who are allowed to do anything with the bot.
   # Note currently this is actually just the same as coordinator, but more powerful
   # actions might be added that are admin only.
   # Admins get power 50 in rooms they are joined to
   # if "promote_users" is set to "true".
+  # If this is set to a room, the bot must be a member of that room.
   admins:
     - "@admin:example.com"
-  # Users who are allowed to maintain a limited set of functions
+    - "!qwerty12345:example.com"
+  # Users or list of users based on room membership, who are allowed to
+  # maintain a limited set of functions.
   # Coordinators get power 50 in rooms they are joined to
   # if "promote_users" is set to "true".
+  # If this is set to a room, the bot must be a member of that room.
   coordinators:
     - "@coordinator:example.com"
+    - "!asdfgh12345:example.com"
   ### Some configuration
   # Demote users who have too much power in a room
   demote_users: false

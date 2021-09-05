@@ -15,7 +15,7 @@ from nio.http import TransportResponse
 from bubo.chat_functions import invite_to_room
 from bubo.config import Config
 from bubo.storage import Storage
-from bubo.utils import with_ratelimit
+from bubo.utils import with_ratelimit, get_users_for_access
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,7 @@ async def ensure_room_power_levels(
     state = await with_ratelimit(client, "room_get_state_event", room_id=room_id, event_type="m.room.power_levels")
     users = state.content["users"].copy()
     member_ids = {member.user_id for member in members}
+    coordinators = await get_users_for_access(client, config, "coordinators")
 
     # check existing users
     for mxid, level in users.items():
@@ -79,11 +80,11 @@ async def ensure_room_power_levels(
 
         # Promote users if they need more power
         if config.permissions_promote_users:
-            if mxid in (config.admins + config.coordinators) and mxid in member_ids and level < 50:
+            if mxid in coordinators and mxid in member_ids and level < 50:
                 users[mxid] = 50
         # Demote users if they should have less power
         if config.permissions_demote_users:
-            if mxid not in (config.admins + config.coordinators) and level > 0:
+            if mxid not in coordinators and level > 0:
                 users[mxid] = 0
         # Always demote users with too much power if not in the room
         if mxid not in member_ids:
@@ -91,7 +92,7 @@ async def ensure_room_power_levels(
 
     # check new users
     if config.permissions_promote_users:
-        for user in (config.admins + config.coordinators):
+        for user in coordinators:
             if user in member_ids:
                 users[user] = 50
 

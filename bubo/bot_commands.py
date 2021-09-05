@@ -4,7 +4,7 @@ import re
 
 from email_validator import validate_email, EmailNotValidError
 # noinspection PyPackageRequirements
-from nio import RoomPutStateError
+from nio import RoomPutStateError, RoomGetStateEventError, RoomPutStateResponse
 # noinspection PyPackageRequirements
 from nio.schemas import check_user_id
 
@@ -13,6 +13,7 @@ from bubo.chat_functions import send_text_to_room, invite_to_room
 from bubo.communities import ensure_community_exists
 from bubo.rooms import ensure_room_exists, create_breakout_room, set_user_power
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
+from bubo.utils import get_users_for_access
 
 logger = logging.getLogger(__name__)
 
@@ -56,22 +57,23 @@ class Command(object):
         self.args = self.command.split()[1:]
 
     async def _ensure_admin(self) -> bool:
-        if self.event.sender not in self.config.admins:
+        admin_users = await get_users_for_access(self.client, self.config, "admins")
+        if self.event.sender not in admin_users:
             await send_text_to_room(
                 self.client,
                 self.room.room_id,
-                TEXT_PERMISSION_DENIED,
+                f"{TEXT_PERMISSION_DENIED} Admin level access needed.",
             )
             return False
         return True
 
     async def _ensure_coordinator(self) -> bool:
-        allowed_users = set(self.config.coordinators + self.config.admins)
+        allowed_users = await get_users_for_access(self.client, self.config, "coordinators")
         if self.event.sender not in allowed_users:
             await send_text_to_room(
                 self.client,
                 self.room.room_id,
-                TEXT_PERMISSION_DENIED,
+                f"{TEXT_PERMISSION_DENIED} Coordinator level access needed.",
             )
             return False
         return True

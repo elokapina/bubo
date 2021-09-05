@@ -7,7 +7,7 @@ from typing import List, Any
 
 from aiolog import matrix
 # noinspection PyPackageRequirements
-from nio.schemas import check_user_id
+from nio.schemas import RoomRegex, UserIdRegex
 
 from bubo.errors import ConfigError
 
@@ -93,17 +93,13 @@ class Config(object):
 
         # Permissions
         self.admins = self._get_cfg(["permissions", "admins"], default=[])
-        try:
-            for admin in self.admins:
-                check_user_id(admin)
-        except ValueError as e:
-            raise ConfigError(str(e))
+        for admin in self.admins:
+            if not re.match(re.compile(RoomRegex), admin) and not re.match(re.compile(UserIdRegex), admin):
+                raise ConfigError(f"Admin {admin} does not look like a user or room")
         self.coordinators = self._get_cfg(["permissions", "coordinators"], default=[])
-        try:
-            for coordinator in self.coordinators:
-                check_user_id(coordinator)
-        except ValueError as e:
-            raise ConfigError(str(e))
+        for coordinator in self.admins:
+            if not re.match(re.compile(RoomRegex), coordinator) and not re.match(re.compile(UserIdRegex), coordinator):
+                raise ConfigError(f"Coordinator {coordinator} does not look like a user or room")
         self.permissions_demote_users = self._get_cfg(["permissions", "demote_users"], default=False, required=False)
         self.permissions_promote_users = self._get_cfg(["permissions", "promote_users"], default=True, required=False)
 
