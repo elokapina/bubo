@@ -93,7 +93,7 @@ async def ensure_room_power_levels(
     # check new users
     if config.permissions_promote_users:
         for user in coordinators:
-            if user in member_ids:
+            if user in member_ids and user != config.user_id:
                 users[user] = 50
 
     power_levels = config.rooms.get("power_levels") if config.rooms.get("enforce_power_in_old_rooms", True) else {}
