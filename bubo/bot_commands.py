@@ -11,7 +11,7 @@ from nio.schemas import check_user_id
 from bubo import help_strings
 from bubo.chat_functions import send_text_to_room, invite_to_room
 from bubo.communities import ensure_community_exists
-from bubo.rooms import ensure_room_exists, create_breakout_room, set_user_power
+from bubo.rooms import ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
 from bubo.utils import get_users_for_access
 
@@ -334,21 +334,31 @@ class Command(object):
                 text = help_strings.HELP_ROOMS
             elif self.args[0] == "list":
                 text = await self._list_rooms()
+            elif self.args[0] == "list-no-admin":
+                text = await self._list_no_admin_rooms()
             else:
                 text = "Unknown subcommand!"
         else:
             text = await self._list_rooms()
         await send_text_to_room(self.client, self.room.room_id, text)
 
+    async def _list_no_admin_rooms(self):
+        text = "I lack admin power in the following rooms I maintain:\n\n"
+        rooms = self.store.get_rooms()
+        rooms_list = []
+        for room in rooms:
+            state, users = await get_room_power_levels(self.client, room.room_id)
+            if users.get(self.config.user_id, 0) < 100:
+                rooms_list.append(f"* {room.name} / #{room.alias}:{self.config.server_name} / {room.room_id}\n")
+        text += "".join(rooms_list)
+        return text
+
     async def _list_rooms(self):
         text = "I currently maintain the following rooms:\n\n"
-        results = self.store.cursor.execute("""
-                select * from rooms
-            """)
+        rooms = self.store.get_rooms()
         rooms_list = []
-        rooms = results.fetchall()
         for room in rooms:
-            rooms_list.append(f"* {room[1]} / #{room[2]}:{self.config.server_name} / {room[3]}\n")
+            rooms_list.append(f"* {room.name} / #{room.alias}:{self.config.server_name} / {room.room_id}\n")
         text += "".join(rooms_list)
         return text
 

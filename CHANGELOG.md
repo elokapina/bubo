@@ -31,6 +31,9 @@
   now accept a room ID whose members will be added as admins or coordinators when checking
   access rights for commands or when setting power levels in rooms.
 
+* Added rooms `list-no-admin` subcommand. Lists all the rooms that Bubo should be maintaining,
+  but which is lacks admin rights to do so for.
+
 ### Changed
 
 * Message edits are now understood as new commands from clients that send them 

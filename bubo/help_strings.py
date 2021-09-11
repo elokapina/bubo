@@ -22,7 +22,7 @@ Subcommands:
 
 * `create`
 
-  Create a room using. Syntax:
+  Create a room using Bubo. Syntax:
 
   `rooms create NAME ALIAS TITLE ENCRYPTED(yes/no) PUBLIC(yes/no)`
     
@@ -35,6 +35,10 @@ Subcommands:
 * `list`
 
   Same as without a subcommand, Bubo will tell you all about the rooms it maintains.
+
+* `list-no-admin`
+
+  List any rooms Bubo maintains where Bubo lacks admin privileges. 
 """
 
 HELP_USERS = """List or manage users.

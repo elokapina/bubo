@@ -152,6 +152,10 @@ ENCRYPTED and PUBLIC are either 'yes' or 'no'.
 
 Same as without a subcommand, Bubo will tell you all about the rooms it maintains.
 
+* `list-no-admin`
+
+List any rooms Bubo maintains where Bubo lacks admin privileges. 
+
 #### `users`
 
 Manage users of an identity provider.
