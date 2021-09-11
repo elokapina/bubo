@@ -68,8 +68,7 @@ async def ensure_room_power_levels(
     Ensure room has correct power levels.
     """
     logger.debug(f"Ensuring power levels: {room_id}")
-    state = await with_ratelimit(client, "room_get_state_event", room_id=room_id, event_type="m.room.power_levels")
-    users = state.content["users"].copy()
+    state, users = await get_room_power_levels(client, room_id)
     member_ids = {member.user_id for member in members}
     coordinators = await get_users_for_access(client, config, "coordinators")
 
@@ -191,6 +190,12 @@ async def ensure_room_exists(
     if room_created:
         return "created", None
     return "exists", None
+
+
+async def get_room_power_levels(client: AsyncClient, room_id: str) -> Tuple[RoomGetStateEventResponse, Dict]:
+    state = await with_ratelimit(client, "room_get_state_event", room_id=room_id, event_type="m.room.power_levels")
+    users = state.content["users"].copy()
+    return state, users
 
 
 async def set_user_power(
