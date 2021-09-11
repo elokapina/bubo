@@ -14,6 +14,29 @@ More help on commands or subcommands using 'help' as the next parameter.
 For source code, see https://github.com/elokapina/bubo
 """
 
+HELP_ROOMS = """Maintains rooms.
+
+When given without parameters, Bubo will tell you about the rooms it maintains.
+
+Subcommands:
+
+* `create`
+
+  Create a room using. Syntax:
+
+  `rooms create NAME ALIAS TITLE ENCRYPTED(yes/no) PUBLIC(yes/no)`
+    
+  Example:
+
+  `rooms create "My awesome room" epic-room "The best room ever!" yes no`
+    
+  Note, ALIAS should only contain lower case ascii characters and dashes. ENCRYPTED and PUBLIC are either 'yes' or 'no'.
+
+* `list`
+
+  Same as without a subcommand, Bubo will tell you all about the rooms it maintains.
+"""
+
 HELP_USERS = """List or manage users.
 
 Without any subcommands, lists users. Other subcommands:

@@ -313,17 +313,7 @@ class Command(object):
                 params = [param for param in params][0]
                 if len(params) != 5 or params[3] not in ('yes', 'no') or params[3] not in ('yes', 'no') \
                         or params[0] == "help":
-                    text = "Wrong number or bad arguments. Usage:\n" \
-                           "\n" \
-                           "`rooms create NAME ALIAS TITLE ENCRYPTED(yes/no) PUBLIC(yes/no)`\n" \
-                           "\n" \
-                           "For example:\n" \
-                           "\n" \
-                           "rooms create \"My awesome room\" epic-room \"The best room ever!\" yes no\n" \
-                           "\n" \
-                           "Note, ALIAS should only contain lower case ascii characters and dashes." \
-                           "\n" \
-                           "ENCRYPTED and PUBLIC are either 'yes' or 'no'."
+                    text = f"Wrong number or bad arguments. Usage:\n\n{help_strings.HELP_ROOMS}"
                 else:
                     result, error = await ensure_room_exists(
                         (None, params[0], params[1], None, params[2], None, True if params[3] == "yes" else False,
@@ -341,12 +331,7 @@ class Command(object):
                     else:
                         text = f"Error creating room: {error}"
             elif self.args[0] == "help":
-                text = "Subcommands and parameters for 'rooms':" \
-                       "\n" \
-                       "* `create NAME ALIAS TITLE ENCRYPTED(yes/no) PUBLIC(yes/no)`" \
-                       "* `list`" \
-                       "\n" \
-                       "Command without parameters will list rooms."
+                text = help_strings.HELP_ROOMS
             elif self.args[0] == "list":
                 text = await self._list_rooms()
             else:
