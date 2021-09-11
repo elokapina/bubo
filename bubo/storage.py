@@ -1,6 +1,6 @@
 import logging
 from importlib import import_module
-from typing import Optional
+from typing import Optional, List
 
 import sqlite3
 
@@ -30,6 +30,7 @@ class Storage(object):
 
         # Initialize a connection to the database
         self.conn = sqlite3.connect(self.db_path)
+        self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
 
         # Create database_version table if it doesn't exist
@@ -67,6 +68,14 @@ class Storage(object):
             self.conn.commit()
             logger.info(f"...done")
 
+    def get_breakout_room_id(self, event_id: str):
+        results = self.cursor.execute("""
+            select room_id from breakout_rooms where event_id = ?;
+        """, (event_id,))
+        room = results.fetchone()
+        if room:
+            return room[0]
+
     def get_room_id(self, alias: str) -> Optional[str]:
         results = self.cursor.execute("""
             select room_id from rooms where alias = ?
@@ -75,13 +84,11 @@ class Storage(object):
         if room:
             return room[0]
 
-    def get_breakout_room_id(self, event_id: str):
+    def get_rooms(self) -> List[sqlite3.Row]:
         results = self.cursor.execute("""
-            select room_id from breakout_rooms where event_id = ?;
-        """, (event_id,))
-        room = results.fetchone()
-        if room:
-            return room[0]
+            select * from rooms
+        """)
+        return results.fetchall()
 
     def store_breakout_room(self, event_id: str, room_id: str):
         self.cursor.execute("""
