@@ -347,9 +347,10 @@ class Command(object):
         rooms = self.store.get_rooms()
         rooms_list = []
         for room in rooms:
-            state, users = await get_room_power_levels(self.client, room.room_id)
+            state, users = await get_room_power_levels(self.client, room["room_id"])
             if users.get(self.config.user_id, 0) < 100:
-                rooms_list.append(f"* {room.name} / #{room.alias}:{self.config.server_name} / {room.room_id}\n")
+                rooms_list.append(f"* {room['name']} / #{room['alias']}:{self.config.server_name} / "
+                                  f"{room['room_id']}\n")
         text += "".join(rooms_list)
         return text
 
@@ -358,7 +359,7 @@ class Command(object):
         rooms = self.store.get_rooms()
         rooms_list = []
         for room in rooms:
-            rooms_list.append(f"* {room.name} / #{room.alias}:{self.config.server_name} / {room.room_id}\n")
+            rooms_list.append(f"* {room['name']} / #{room['alias']}:{self.config.server_name} / {room['room_id']}\n")
         text += "".join(rooms_list)
         return text
 
