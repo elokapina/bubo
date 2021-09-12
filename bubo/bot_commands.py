@@ -13,7 +13,7 @@ from bubo.chat_functions import send_text_to_room, invite_to_room
 from bubo.communities import ensure_community_exists
 from bubo.rooms import ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
-from bubo.utils import get_users_for_access
+from bubo.utils import get_users_for_access, with_ratelimit
 
 logger = logging.getLogger(__name__)
 
@@ -347,10 +347,19 @@ class Command(object):
         rooms = self.store.get_rooms()
         rooms_list = []
         for room in rooms:
-            state, users = await get_room_power_levels(self.client, room["room_id"])
-            if users.get(self.config.user_id, 0) < 100:
+            _state, users = await get_room_power_levels(self.client, room["room_id"])
+            if users and users.get(self.config.user_id, 0) < 100:
+                joined_members = await with_ratelimit(
+                    self.client, "joined_members", room_id=room["room_id"],
+                )
+                user_count = getattr(joined_members, "members", None)
+                suffix = ""
+                admin_users = [user for user, power in users.items() if power == 100]
+                if len(admin_users):
+                    suffix = f". **The room has {len(admin_users)} other admins.**"
                 rooms_list.append(f"* {room['name']} / #{room['alias']}:{self.config.server_name} / "
-                                  f"{room['room_id']}\n")
+                                  f"{room['room_id']} / users: {len(user_count) if user_count else 'unknown'}"
+                                  f"{suffix}\n")
         text += "".join(rooms_list)
         return text
 

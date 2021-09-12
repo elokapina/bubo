@@ -192,9 +192,18 @@ async def ensure_room_exists(
     return "exists", None
 
 
-async def get_room_power_levels(client: AsyncClient, room_id: str) -> Tuple[RoomGetStateEventResponse, Dict]:
-    state = await with_ratelimit(client, "room_get_state_event", room_id=room_id, event_type="m.room.power_levels")
-    users = state.content["users"].copy()
+async def get_room_power_levels(
+    client: AsyncClient, room_id: str,
+) -> Tuple[Optional[RoomGetStateEventResponse], Optional[Dict]]:
+    logger.debug(f"Fetching power levels for {room_id}")
+    state = None
+    try:
+        state = await with_ratelimit(client, "room_get_state_event", room_id=room_id, event_type="m.room.power_levels")
+        logger.debug(f"Found power levels state: {state}")
+        users = state.content["users"].copy()
+    except KeyError as ex:
+        logger.warning(f"Error looking for power levels for room {room_id}: {ex} - state: {state}")
+        return None, None
     return state, users
 
 
