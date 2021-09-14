@@ -41,6 +41,12 @@ Subcommands:
   List any rooms Bubo maintains where Bubo lacks admin privileges. 
 """
 
+HELP_ROOMS_RECREATE_CONFIRM = """Please confirm room re-create with the command `%srooms recreate confirm`.
+You have 10s to confirm before this request expires.
+
+**This is destructive, the room will be replaced. This cannot be reversed!**
+"""
+
 HELP_USERS = """List or manage users.
 
 Without any subcommands, lists users. Other subcommands:

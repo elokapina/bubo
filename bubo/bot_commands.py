@@ -336,6 +336,8 @@ class Command(object):
                 text = await self._list_rooms()
             elif self.args[0] == "list-no-admin":
                 text = await self._list_no_admin_rooms()
+            elif self.args[0] == 'recreate':
+                return self._recreate_room(subcommand=self.args[1] if len(self.args) > 1 else None)
             else:
                 text = "Unknown subcommand!"
         else:
@@ -371,6 +373,26 @@ class Command(object):
             rooms_list.append(f"* {room['name']} / #{room['alias']}:{self.config.server_name} / {room['room_id']}\n")
         text += "".join(rooms_list)
         return text
+
+    async def _recreate_room(self, subcommand):
+        """
+        Command to recreate a room. Useful if the room has no admins.
+        """
+        if not self._ensure_admin():
+            return
+
+        if not subcommand:
+            # TODO store room data in recreate command database table
+            return await send_text_to_room(
+                self.client, self.room.room_id, help_strings.HELP_ROOMS_RECREATE_CONFIRM % self.config.command_prefix,
+            )
+        if subcommand != "confirm":
+            return await send_text_to_room(
+                self.client, self.room.room_id, "Unknown subscommand, sorry",
+            )
+
+        # TODO fetch room recreate command data and start doing the stuff
+        # Should ensure command to confirm is given within 10 seconds and that it's made by the same admin.
 
     async def _unknown_command(self):
         await send_text_to_room(
