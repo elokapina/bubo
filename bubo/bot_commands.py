@@ -398,7 +398,7 @@ class Command(object):
 
         if subcommand != "confirm":
             return await send_text_to_room(
-                self.client, self.room.room_id, "Unknown subcommand, sorry",
+                self.client, self.room.room_id, f"Unknown subcommand. Usage:\n\n{help_strings.HELP_ROOMS_RECREATE}",
             )
 
         recreate_room = self.store.get_recreate_room(self.room.room_id)
