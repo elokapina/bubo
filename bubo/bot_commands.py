@@ -1,6 +1,7 @@
 import csv
 import logging
 import re
+import time
 
 from email_validator import validate_email, EmailNotValidError
 # noinspection PyPackageRequirements
@@ -382,17 +383,43 @@ class Command(object):
             return
 
         if not subcommand:
-            # TODO store room data in recreate command database table
+            recreate_room = self.store.get_recreate_room(self.room.room_id)
+            if recreate_room:
+                if recreate_room["applied"] == 1:
+                    return await send_text_to_room(
+                        self.client, self.room.room_id,
+                        "Can only recreate a room once, this room has already been recreated.",
+                    )
+                await self.store.delete_recreate_room(self.room.room_id)
+            await self.store.store_recreate_room(self.event.sender, self.room.room_id)
             return await send_text_to_room(
                 self.client, self.room.room_id, help_strings.HELP_ROOMS_RECREATE_CONFIRM % self.config.command_prefix,
             )
+
         if subcommand != "confirm":
             return await send_text_to_room(
-                self.client, self.room.room_id, "Unknown subscommand, sorry",
+                self.client, self.room.room_id, "Unknown subcommand, sorry",
             )
 
-        # TODO fetch room recreate command data and start doing the stuff
-        # Should ensure command to confirm is given within 10 seconds and that it's made by the same admin.
+        recreate_room = self.store.get_recreate_room(self.room.room_id)
+        if not recreate_room:
+            return await send_text_to_room(
+                self.client, self.room.room_id,
+                "Cannot confirm room recreate before requesting room recreate.",
+            )
+        if recreate_room["requester"] != self.event.sender:
+            return await send_text_to_room(
+                self.client, self.room.room_id,
+                "Room recreate confirm must be given by the room recreate requester.",
+            )
+        if int(time.time()) - recreate_room["timestamp"] > 10:
+            return await send_text_to_room(
+                self.client, self.room.room_id,
+                "Room recreate confirmation must be given within 10 seconds. Please request recreation again.",
+            )
+
+        # OK confirmation over, let's do stuff
+        # TODO do stuff
 
     async def _unknown_command(self):
         await send_text_to_room(
