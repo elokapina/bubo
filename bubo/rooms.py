@@ -7,7 +7,7 @@ from aiohttp import ClientResponse
 # noinspection PyPackageRequirements
 from nio import (
     AsyncClient, RoomVisibility, EnableEncryptionBuilder, RoomPutStateError, RoomGetStateEventError,
-    RoomPutStateResponse, RoomGetStateEventResponse,
+    RoomPutStateResponse, RoomGetStateEventResponse, MatrixRoom,
 )
 # noinspection PyPackageRequirements
 from nio.http import TransportResponse
@@ -205,6 +205,58 @@ async def get_room_power_levels(
         logger.warning(f"Error looking for power levels for room {room_id}: {ex} - state: {state}")
         return None, None
     return state, users
+
+
+async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -> Optional[str]:
+    """
+    Replace a room with a new room.
+    """
+    alias = None
+    # Remove aliases from the old room
+    if room.canonical_alias:
+        alias = room.canonical_alias
+        logger.debug(f"Removing alias {room.canonical_alias}")
+        await with_ratelimit(client, "room_delete_alias", room_alias=room.canonical_alias)
+
+    # Get room visibility
+    room_visibility = await with_ratelimit(client, "room_get_visibility", room_id=room.room_id)
+    logger.debug(f"Room visibility is: {room_visibility}")
+
+    # Create new room
+    users = {user.user_id for user in room.users.values()}
+    invited_users = {user.user_id for user in room.invited_users.values()}
+    users = users.union(invited_users)
+    initial_state = []
+    if room.encrypted:
+        initial_state.append({
+            "type": "m.room.encryption",
+            "state_key": "",
+            "content": {
+                "algorithm": "m.megolm.v1.aes-sha2",
+                "rotation_period_ms": 604800000,
+                "rotation_period_msgs": 100,
+            },
+        })
+    power_levels, _users = await get_room_power_levels(client, room.room_id)
+    # Ensure we don't immediately demote ourselves
+    power_levels.content["users"][config.user_id] = 100
+    logger.info(f"Recreating room {room.room_id} for {len(users)} users")
+    new_room = await with_ratelimit(
+        client,
+        "room_create",
+        visibility=room_visibility.visibility,
+        alias=alias,
+        name=room.name,
+        topic=room.topic,
+        # TODO remove at later stage
+        room_version="9",
+        federate=room.federate,
+        invite=users,
+        initial_state=initial_state,
+        power_level_override=power_levels,
+    )
+    logger.info(f"New room id for {room.room_id} is {new_room.room_id}")
+    return new_room.room_id
 
 
 async def set_user_power(

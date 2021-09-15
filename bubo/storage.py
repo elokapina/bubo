@@ -5,7 +5,7 @@ from typing import Optional, List
 
 import sqlite3
 
-latest_db_version = 7
+latest_db_version = 8
 
 logger = logging.getLogger(__name__)
 
@@ -87,9 +87,7 @@ class Storage(object):
         results = self.cursor.execute("""
             select requester, timestamp, applied from recreate_rooms where room_id = ?;
         """, (room_id,))
-        room = results.fetchone()
-        if room:
-            return room[0]
+        return results.fetchone()
 
     def get_room_id(self, alias: str) -> Optional[str]:
         results = self.cursor.execute("""

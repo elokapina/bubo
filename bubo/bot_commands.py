@@ -12,7 +12,7 @@ from nio.schemas import check_user_id
 from bubo import help_strings
 from bubo.chat_functions import send_text_to_room, invite_to_room
 from bubo.communities import ensure_community_exists
-from bubo.rooms import ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels
+from bubo.rooms import ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels, recreate_room
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
 from bubo.utils import get_users_for_access, with_ratelimit
 
@@ -338,7 +338,7 @@ class Command(object):
             elif self.args[0] == "list-no-admin":
                 text = await self._list_no_admin_rooms()
             elif self.args[0] == 'recreate':
-                return self._recreate_room(subcommand=self.args[1] if len(self.args) > 1 else None)
+                return await self._recreate_room(subcommand=self.args[1] if len(self.args) > 1 else None)
             else:
                 text = "Unknown subcommand!"
         else:
@@ -379,19 +379,19 @@ class Command(object):
         """
         Command to recreate a room. Useful if the room has no admins.
         """
-        if not self._ensure_admin():
+        if not await self._ensure_admin():
             return
 
         if not subcommand:
-            recreate_room = self.store.get_recreate_room(self.room.room_id)
-            if recreate_room:
-                if recreate_room["applied"] == 1:
+            room = self.store.get_recreate_room(self.room.room_id)
+            if room:
+                if room["applied"] == 1:
                     return await send_text_to_room(
                         self.client, self.room.room_id,
                         "Can only recreate a room once, this room has already been recreated.",
                     )
-                await self.store.delete_recreate_room(self.room.room_id)
-            await self.store.store_recreate_room(self.event.sender, self.room.room_id)
+                self.store.delete_recreate_room(self.room.room_id)
+            self.store.store_recreate_room(self.event.sender, self.room.room_id)
             return await send_text_to_room(
                 self.client, self.room.room_id, help_strings.HELP_ROOMS_RECREATE_CONFIRM % self.config.command_prefix,
             )
@@ -401,25 +401,29 @@ class Command(object):
                 self.client, self.room.room_id, f"Unknown subcommand. Usage:\n\n{help_strings.HELP_ROOMS_RECREATE}",
             )
 
-        recreate_room = self.store.get_recreate_room(self.room.room_id)
-        if not recreate_room:
+        room = self.store.get_recreate_room(self.room.room_id)
+        if not room:
             return await send_text_to_room(
                 self.client, self.room.room_id,
                 "Cannot confirm room recreate before requesting room recreate.",
             )
-        if recreate_room["requester"] != self.event.sender:
+        if room["requester"] != self.event.sender:
             return await send_text_to_room(
                 self.client, self.room.room_id,
                 "Room recreate confirm must be given by the room recreate requester.",
             )
-        if int(time.time()) - recreate_room["timestamp"] > 10:
+        if int(time.time()) - room["timestamp"] > 10:
             return await send_text_to_room(
                 self.client, self.room.room_id,
                 "Room recreate confirmation must be given within 10 seconds. Please request recreation again.",
             )
 
         # OK confirmation over, let's do stuff
-        # TODO do stuff
+        new_room_id = await recreate_room(self.room, self.client, self.config)
+        return await send_text_to_room(
+            self.client, self.room.room_id,
+            f"New room ID is {new_room_id}!",
+        )
 
     async def _unknown_command(self):
         await send_text_to_room(
