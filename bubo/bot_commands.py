@@ -420,6 +420,11 @@ class Command(object):
 
         # OK confirmation over, let's do stuff
         new_room_id = await recreate_room(self.room, self.client, self.config)
+        if not new_room_id:
+            return await send_text_to_room(
+                self.client, self.room.room_id,
+                f"Failed to create new room. Please see logs or contact support.",
+            )
         return await send_text_to_room(
             self.client, self.room.room_id,
             f"New room ID is {new_room_id}!",

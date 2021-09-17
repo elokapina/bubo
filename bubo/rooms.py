@@ -7,7 +7,7 @@ from aiohttp import ClientResponse
 # noinspection PyPackageRequirements
 from nio import (
     AsyncClient, RoomVisibility, EnableEncryptionBuilder, RoomPutStateError, RoomGetStateEventError,
-    RoomPutStateResponse, RoomGetStateEventResponse, MatrixRoom,
+    RoomPutStateResponse, RoomGetStateEventResponse, MatrixRoom, RoomCreateError,
 )
 # noinspection PyPackageRequirements
 from nio.http import TransportResponse
@@ -223,8 +223,8 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
     logger.debug(f"Room visibility is: {room_visibility}")
 
     # Create new room
-    users = {user.user_id for user in room.users.values()}
-    invited_users = {user.user_id for user in room.invited_users.values()}
+    users = {user.user_id for user in room.users.values() if user.user_id != config.user_id}
+    invited_users = {user.user_id for user in room.invited_users.values() if user.user_id != config.user_id}
     users = users.union(invited_users)
     initial_state = []
     if room.encrypted:
@@ -244,7 +244,7 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
     new_room = await with_ratelimit(
         client,
         "room_create",
-        visibility=room_visibility.visibility,
+        visibility=RoomVisibility(room_visibility.visibility),
         alias=alias,
         name=room.name,
         topic=room.topic,
@@ -253,8 +253,11 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
         federate=room.federate,
         invite=users,
         initial_state=initial_state,
-        power_level_override=power_levels,
+        power_level_override=power_levels.content,
     )
+    if isinstance(new_room, RoomCreateError):
+        logger.warning(f"Failed to create new room: {new_room.status_code} / {new_room.message}")
+        return
     logger.info(f"New room id for {room.room_id} is {new_room.room_id}")
     return new_room.room_id
 
