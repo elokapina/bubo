@@ -107,6 +107,10 @@ rooms:
     users_default: 0
   # Should bubo enforce the default power levels in old rooms as well?
   enforce_power_in_old_rooms: true
+  # Recreate room command
+  recreate:
+    # Secondary admin to invite to recreated rooms (optional)
+    #secondary_admin: "@user:domain.tld"
 
 # Configuration related to bot callbacks
 callbacks:

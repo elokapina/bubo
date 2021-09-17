@@ -105,6 +105,7 @@ class Config(object):
 
         # Rooms
         self.rooms = self._get_cfg(["rooms"], default={}, required=False)
+        self.rooms_recreate = self._get_cfg(["rooms", "recreate"], default={}, required=False)
 
         # Callbacks
         self.callbacks = self._get_cfg(["callbacks"], default={}, required=False)
