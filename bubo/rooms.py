@@ -241,9 +241,9 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
     # Ensure we don't immediately demote ourselves
     power_levels.content["users"][config.user_id] = 100
     # Add secondary admin if configured
-    if config.rooms_recreate.get("secondary_admin"):
-        users.add(config.rooms_recreate.get("secondary_admin"))
-        power_levels.content["users"][config.rooms_recreate.get("secondary_admin")] = 100
+    if config.rooms.get("secondary_admin"):
+        users.add(config.rooms.get("secondary_admin"))
+        power_levels.content["users"][config.rooms.get("secondary_admin")] = 100
 
     logger.info(f"Recreating room {room.room_id} for {len(users)} users")
     new_room = await with_ratelimit(
