@@ -109,6 +109,10 @@ rooms:
   enforce_power_in_old_rooms: true
   # Secondary admin to invite to maintained rooms (optional)
   #secondary_admin: "@user:domain.tld"
+  # Always recreate rooms in federated mode
+  # Useful to set when some rooms have been created as non-federated and the
+  # room recreate is used to create new versions in federated mode.
+  recreate_as_federated: false
 
 # Configuration related to bot callbacks
 callbacks:

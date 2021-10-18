@@ -246,6 +246,7 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
         power_levels.content["users"][config.rooms.get("secondary_admin")] = 100
 
     logger.info(f"Recreating room {room.room_id} for {len(users)} users")
+    federated = True if config.rooms.get("recreate_as_federated", False) else room.federate
     new_room = await with_ratelimit(
         client,
         "room_create",
@@ -255,7 +256,7 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
         topic=room.topic,
         # TODO remove at later stage
         room_version="9",
-        federate=room.federate,
+        federate=federated,
         invite=users,
         initial_state=initial_state,
         power_level_override=power_levels.content,
