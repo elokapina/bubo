@@ -18,12 +18,16 @@ class DenyEventsModule:
         return config
 
     async def check_event_for_spam(self, event: "synapse.events.EventBase") -> Union[bool, str]:
-        if event.room_id in self.config.get("rooms"):
+        if event.sender in self.config.get("users", []):
+            return False
+        if event.room_id in self.config.get("rooms", []):
             return "This room does not accept events."
         return False
 
     async def user_may_invite(self, inviter: str, invitee: str, room_id: str) -> bool:
-        if room_id in self.config.get("rooms"):
+        if inviter in self.config.get("users", []):
+            return True
+        if room_id in self.config.get("rooms", []):
             return False
         return True
 

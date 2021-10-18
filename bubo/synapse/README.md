@@ -10,11 +10,15 @@ modules work.
 
 ### deny_events.DenyEventsModule
 
-Denies events and invitations forHaven configured rooms by ID.
+Denies events and invitations for configured rooms by ID.
 
 Config:
 
 ```yaml
+# Users who skip the deny checks for the below rooms
+users_whitelist:
+  - '@user:domain.tld'
+# Rooms where events are denied
 rooms:
   - "!foobar:domain.tld"
   - "!barfoo:domain.tld"
