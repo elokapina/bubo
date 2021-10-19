@@ -268,6 +268,17 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
 
     logger.info(f"New room id for {room.room_id} is {new_room.room_id}")
 
+    # Rename the old room
+    await with_ratelimit(
+        client,
+        "room_put_state",
+        room_id=room.room_id,
+        event_type="m.room.name",
+        content={
+            "name": f"{config.rooms.get('recreate_old_room_name_prefix', 'OLD')} {room.name}",
+        },
+    )
+
     # Post a message to the start of the timeline of the new room and the end of the timeline for the
     # old room
     old_room_link = f"https://matrix.to/#/{room.room_id}?via={config.server_name}"

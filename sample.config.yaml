@@ -116,6 +116,8 @@ rooms:
   # Useful to set when some rooms have been created as non-federated and the
   # room recreate is used to create new versions in federated mode.
   recreate_as_federated: false
+  # Prefix to use when renaming old recreated rooms
+  recreate_old_room_name_prefix: "OLD"
 
 # Configuration related to bot callbacks
 callbacks:
