@@ -287,15 +287,16 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
         await send_text_to_room(
             client,
             room.room_id,
-            f"#### This room has been replaced\n\nTo continue discussion in the new room, click this link: {new_room_link}",
+            f"#### This room has been replaced\n\nTo continue discussion in the new room, click this "
+            f"link: {new_room_link}",
         )
         # Unfortunately we can't use matrix-nio here as it doesn't know about the room and will die with
         # LocalProtocolError as it fails to find the room in its local cache. Use the C2S API directly.
         send_text_to_room_c2s(
             config,
             new_room.room_id,
-            f"#### This room replaces the old '{room.name}' room {room.room_id}.\n\nShould you need to view the old room, "
-            f"click this link: {old_room_link}",
+            f"#### This room replaces the old '{room.name}' room {room.room_id}.\n\nShould you need to view "
+            f"the old room, click this link: {old_room_link}",
         )
 
         if config.is_synapse_admin:
@@ -306,7 +307,9 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
                         synapse_admin.join_user(config, user, new_room.room_id)
                         logger.debug(f"Successfully joined user {user} to new room {new_room.room_id}")
                     except Exception as ex:
-                        logger.warning(f"Failed to join user {user} to new room {new_room.room_id} via Synapse admin: {ex}")
+                        logger.warning(
+                            f"Failed to join user {user} to new room {new_room.room_id} via Synapse admin: {ex}",
+                        )
 
         return new_room.room_id
     except Exception as ex:
