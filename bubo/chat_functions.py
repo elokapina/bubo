@@ -1,12 +1,17 @@
 import logging
 import time
+import uuid
 from typing import Optional
 
+import requests
 # noinspection PyPackageRequirements
 from nio import (
-    SendRetryError, RoomInviteError, AsyncClient, ErrorResponse, RoomSendResponse
+    SendRetryError, RoomInviteError, AsyncClient, ErrorResponse, RoomSendResponse,
 )
 from markdown import markdown
+
+from bubo.config import Config
+from bubo.utils import get_request_headers
 
 logger = logging.getLogger(__name__)
 
@@ -97,4 +102,49 @@ async def send_text_to_room(
         else:
             logger.warning(f"Failed to get event_id from send_text_to_room, response: {response}")
     except SendRetryError:
-        logger.exception(f"Unable to send message response to {room_id}")
+        logger.exception(f"Unable to send message to {room_id}")
+
+
+def send_text_to_room_c2s(
+    config: Config,
+    room_id: str,
+    message: str,
+    notice=True,
+    markdown_convert=True,
+    reply_to_event_id: Optional[str] = None,
+) -> str:
+    """
+    Send text to a matrix room using the C2S API directly.
+
+    # TODO replace with an async library here and elsewhere where requests is used
+    """
+    # Determine whether to ping room members or not
+    msgtype = "m.notice" if notice else "m.text"
+
+    content = {
+        "msgtype": msgtype,
+        "format": "org.matrix.custom.html",
+        "body": message,
+    }
+
+    if markdown_convert:
+        content["formatted_body"] = markdown(message)
+
+    if reply_to_event_id:
+        content["m.relates_to"] = {"m.in_reply_to": {"event_id": reply_to_event_id}}
+
+    try:
+        response = requests.put(
+            f"{config.homeserver_url}/_matrix/client/r0/rooms/{room_id}/send/m.room.message/{str(uuid.uuid4())}",
+            json=content,
+            headers=get_request_headers(config),
+        )
+        if response.status_code == 429:
+            time.sleep(3)
+            return send_text_to_room_c2s(
+                config, room_id, message, notice, markdown_convert, reply_to_event_id,
+            )
+        response.raise_for_status()
+        return response.json()["event_id"]
+    except Exception as ex:
+        logger.exception(f"Unable to send C2S message to {room_id}: {ex}")
