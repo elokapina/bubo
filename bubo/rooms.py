@@ -13,7 +13,7 @@ from nio import (
 from nio.http import TransportResponse
 
 from bubo import synapse_admin
-from bubo.chat_functions import invite_to_room
+from bubo.chat_functions import invite_to_room, send_text_to_room
 from bubo.config import Config
 from bubo.storage import Storage
 from bubo.utils import with_ratelimit, get_users_for_access
@@ -267,6 +267,22 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
         return
 
     logger.info(f"New room id for {room.room_id} is {new_room.room_id}")
+
+    # Post a message to the start of the timeline of the new room and the end of the timeline for the
+    # old room
+    old_room_link = f"https://matrix.to/#/{room.room_id}?via={config.server_name}"
+    new_room_link = f"https://matrix.to/#/{new_room.room_id}?via={config.server_name}"
+    await send_text_to_room(
+        client,
+        new_room.room_id,
+        f"#### This room replaces the old '{room.name}' room {room.room_id}.\n\nShould you need to view the old room, "
+        f"click this link: {old_room_link}",
+    )
+    await send_text_to_room(
+        client,
+        room.room_id,
+        f"#### This room has been replaced\n\nTo continue discussion in the new room, click this link: {new_room_link}",
+    )
 
     if config.is_synapse_admin:
         # Try to force join local users
