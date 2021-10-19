@@ -39,6 +39,10 @@ Subcommands:
 * `list-no-admin`
 
   List any rooms Bubo maintains where Bubo lacks admin privileges. 
+  
+* `recreate`
+
+  Recreate the current room.
 """
 
 HELP_ROOMS_RECREATE = """Recreates a room.
