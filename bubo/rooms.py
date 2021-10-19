@@ -12,6 +12,7 @@ from nio import (
 # noinspection PyPackageRequirements
 from nio.http import TransportResponse
 
+from bubo import synapse_admin
 from bubo.chat_functions import invite_to_room
 from bubo.config import Config
 from bubo.storage import Storage
@@ -264,7 +265,19 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
     if isinstance(new_room, RoomCreateError):
         logger.warning(f"Failed to create new room: {new_room.status_code} / {new_room.message}")
         return
+
     logger.info(f"New room id for {room.room_id} is {new_room.room_id}")
+
+    if config.is_synapse_admin:
+        # Try to force join local users
+        for user in users:
+            if user.endswith(f":{config.server_name}"):
+                try:
+                    synapse_admin.join_user(config, user, new_room.room_id)
+                    logger.debug(f"Successfully joined user {user} to new room {new_room.room_id}")
+                except Exception as ex:
+                    logger.warning(f"Failed to join user {user} to new room {new_room.room_id} via Synapse admin: {ex}")
+
     return new_room.room_id
 
 

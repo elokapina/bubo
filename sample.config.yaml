@@ -22,6 +22,9 @@ matrix:
   device_id: ABCDEFGHIJ
   # What to name the logged in device
   device_name: bubo
+  # Has Synapse admin?
+  # Set to true if Bubo has Synapse admin API access
+  is_synapse_admin: false
 
 # Different commands might require a permission.
 # Here we list the minimum permission needed for the command.
