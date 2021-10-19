@@ -10,6 +10,12 @@ from bubo.config import Config
 logger = logging.getLogger(__name__)
 
 
+def get_request_headers(config):
+    return {
+        "Authorization": f"Bearer {config.user_token}",
+    }
+
+
 async def get_users_for_access(client: AsyncClient, config: Config, access_type: str) -> Set:
     if access_type == "admins":
         existing_list = list(set(config.admins[:]))

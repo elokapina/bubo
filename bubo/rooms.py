@@ -13,7 +13,7 @@ from nio import (
 from nio.http import TransportResponse
 
 from bubo import synapse_admin
-from bubo.chat_functions import invite_to_room, send_text_to_room
+from bubo.chat_functions import invite_to_room, send_text_to_room, send_text_to_room_c2s
 from bubo.config import Config
 from bubo.storage import Storage
 from bubo.utils import with_ratelimit, get_users_for_access
@@ -212,100 +212,113 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
     """
     Replace a room with a new room.
     """
-    alias = None
-    # Remove aliases from the old room
-    if room.canonical_alias:
-        alias = room.canonical_alias
-        logger.debug(f"Removing alias {room.canonical_alias}")
-        await with_ratelimit(client, "room_delete_alias", room_alias=room.canonical_alias)
+    try:
+        alias = None
+        # Remove aliases from the old room
+        if room.canonical_alias:
+            alias = room.canonical_alias
+            logger.debug(f"Removing alias {room.canonical_alias}")
+            await with_ratelimit(client, "room_delete_alias", room_alias=room.canonical_alias)
 
-    # Get room visibility
-    room_visibility = await with_ratelimit(client, "room_get_visibility", room_id=room.room_id)
-    logger.debug(f"Room visibility is: {room_visibility}")
+        # Get room visibility
+        room_visibility = await with_ratelimit(client, "room_get_visibility", room_id=room.room_id)
+        logger.debug(f"Room visibility is: {room_visibility}")
 
-    # Create new room
-    users = {user.user_id for user in room.users.values() if user.user_id != config.user_id}
-    invited_users = {user.user_id for user in room.invited_users.values() if user.user_id != config.user_id}
-    users = users.union(invited_users)
-    initial_state = []
-    if room.encrypted:
-        initial_state.append({
-            "type": "m.room.encryption",
-            "state_key": "",
-            "content": {
-                "algorithm": "m.megolm.v1.aes-sha2",
-                "rotation_period_ms": 604800000,
-                "rotation_period_msgs": 100,
+        # Create new room
+        users = {user.user_id for user in room.users.values() if user.user_id != config.user_id}
+        invited_users = {user.user_id for user in room.invited_users.values() if user.user_id != config.user_id}
+        users = users.union(invited_users)
+        initial_state = []
+        if room.encrypted:
+            initial_state.append({
+                "type": "m.room.encryption",
+                "state_key": "",
+                "content": {
+                    "algorithm": "m.megolm.v1.aes-sha2",
+                    "rotation_period_ms": 604800000,
+                    "rotation_period_msgs": 100,
+                },
+            })
+        power_levels, _users = await get_room_power_levels(client, room.room_id)
+        # Ensure we don't immediately demote ourselves
+        power_levels.content["users"][config.user_id] = 100
+        # Add secondary admin if configured
+        if config.rooms.get("secondary_admin"):
+            users.add(config.rooms.get("secondary_admin"))
+            power_levels.content["users"][config.rooms.get("secondary_admin")] = 100
+
+        logger.info(f"Recreating room {room.room_id} for {len(users)} users")
+        federated = True if config.rooms.get("recreate_as_federated", False) else room.federate
+        new_room = await with_ratelimit(
+            client,
+            "room_create",
+            visibility=RoomVisibility(room_visibility.visibility),
+            alias=alias,
+            name=room.name,
+            topic=room.topic,
+            # TODO remove at later stage
+            room_version="9",
+            federate=federated,
+            invite=users,
+            initial_state=initial_state,
+            power_level_override=power_levels.content,
+        )
+        if isinstance(new_room, RoomCreateError):
+            logger.warning(f"Failed to create new room: {new_room.status_code} / {new_room.message}")
+            return
+
+        logger.info(f"New room id for {room.room_id} is {new_room.room_id}")
+
+        # Rename the old room
+        await with_ratelimit(
+            client,
+            "room_put_state",
+            room_id=room.room_id,
+            event_type="m.room.name",
+            content={
+                "name": f"{config.rooms.get('recreate_old_room_name_prefix', 'OLD')} {room.name}",
             },
-        })
-    power_levels, _users = await get_room_power_levels(client, room.room_id)
-    # Ensure we don't immediately demote ourselves
-    power_levels.content["users"][config.user_id] = 100
-    # Add secondary admin if configured
-    if config.rooms.get("secondary_admin"):
-        users.add(config.rooms.get("secondary_admin"))
-        power_levels.content["users"][config.rooms.get("secondary_admin")] = 100
+        )
 
-    logger.info(f"Recreating room {room.room_id} for {len(users)} users")
-    federated = True if config.rooms.get("recreate_as_federated", False) else room.federate
-    new_room = await with_ratelimit(
-        client,
-        "room_create",
-        visibility=RoomVisibility(room_visibility.visibility),
-        alias=alias,
-        name=room.name,
-        topic=room.topic,
-        # TODO remove at later stage
-        room_version="9",
-        federate=federated,
-        invite=users,
-        initial_state=initial_state,
-        power_level_override=power_levels.content,
-    )
-    if isinstance(new_room, RoomCreateError):
-        logger.warning(f"Failed to create new room: {new_room.status_code} / {new_room.message}")
-        return
+        # Post a message to the start of the timeline of the new room and the end of the timeline for the
+        # old room
+        old_room_link = f"https://matrix.to/#/{room.room_id}?via={config.server_name}"
+        new_room_link = f"https://matrix.to/#/{new_room.room_id}?via={config.server_name}"
+        await send_text_to_room(
+            client,
+            room.room_id,
+            f"#### This room has been replaced\n\nTo continue discussion in the new room, click this link: {new_room_link}",
+        )
+        # Unfortunately we can't use matrix-nio here as it doesn't know about the room and will die with
+        # LocalProtocolError as it fails to find the room in its local cache. Use the C2S API directly.
+        send_text_to_room_c2s(
+            config,
+            new_room.room_id,
+            f"#### This room replaces the old '{room.name}' room {room.room_id}.\n\nShould you need to view the old room, "
+            f"click this link: {old_room_link}",
+        )
 
-    logger.info(f"New room id for {room.room_id} is {new_room.room_id}")
+        if config.is_synapse_admin:
+            # Try to force join local users
+            for user in users:
+                if user.endswith(f":{config.server_name}"):
+                    try:
+                        synapse_admin.join_user(config, user, new_room.room_id)
+                        logger.debug(f"Successfully joined user {user} to new room {new_room.room_id}")
+                    except Exception as ex:
+                        logger.warning(f"Failed to join user {user} to new room {new_room.room_id} via Synapse admin: {ex}")
 
-    # Rename the old room
-    await with_ratelimit(
-        client,
-        "room_put_state",
-        room_id=room.room_id,
-        event_type="m.room.name",
-        content={
-            "name": f"{config.rooms.get('recreate_old_room_name_prefix', 'OLD')} {room.name}",
-        },
-    )
-
-    # Post a message to the start of the timeline of the new room and the end of the timeline for the
-    # old room
-    old_room_link = f"https://matrix.to/#/{room.room_id}?via={config.server_name}"
-    new_room_link = f"https://matrix.to/#/{new_room.room_id}?via={config.server_name}"
-    await send_text_to_room(
-        client,
-        new_room.room_id,
-        f"#### This room replaces the old '{room.name}' room {room.room_id}.\n\nShould you need to view the old room, "
-        f"click this link: {old_room_link}",
-    )
-    await send_text_to_room(
-        client,
-        room.room_id,
-        f"#### This room has been replaced\n\nTo continue discussion in the new room, click this link: {new_room_link}",
-    )
-
-    if config.is_synapse_admin:
-        # Try to force join local users
-        for user in users:
-            if user.endswith(f":{config.server_name}"):
-                try:
-                    synapse_admin.join_user(config, user, new_room.room_id)
-                    logger.debug(f"Successfully joined user {user} to new room {new_room.room_id}")
-                except Exception as ex:
-                    logger.warning(f"Failed to join user {user} to new room {new_room.room_id} via Synapse admin: {ex}")
-
-    return new_room.room_id
+        return new_room.room_id
+    except Exception as ex:
+        logger.error(f"Failed to recreate room {room.room_id}: {ex}")
+        try:
+            await send_text_to_room(
+                client,
+                room.room_id,
+                f"Failed to recreate room. Please look at logs or contact support.",
+            )
+        except Exception as ex:
+            logger.error(f"Failed to inform of error to the room to be recreated: {ex}")
 
 
 async def set_user_power(

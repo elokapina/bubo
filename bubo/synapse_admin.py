@@ -3,19 +3,14 @@ import time
 import requests
 
 from bubo.config import Config
+from bubo.utils import get_request_headers
 
 API_PREFIX_V1 = "/_synapse/admin/v1"
 API_PREFIX_V2 = "/_synapse/admin/v2"
 
 
-def get_headers(config):
-    return {
-        "Authorization": f"Bearer {config.user_token}",
-    }
-
-
 def join_user(config: Config, user_id: str, room_id_or_alias: str) -> int:
-    headers = get_headers(config)
+    headers = get_request_headers(config)
 
     response = requests.post(
         f"{config.homeserver_url}{API_PREFIX_V1}/join/{room_id_or_alias}",
