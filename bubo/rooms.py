@@ -292,7 +292,7 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
         )
         # Unfortunately we can't use matrix-nio here as it doesn't know about the room and will die with
         # LocalProtocolError as it fails to find the room in its local cache. Use the C2S API directly.
-        send_text_to_room_c2s(
+        await send_text_to_room_c2s(
             config,
             new_room.room_id,
             f"#### This room replaces the old '{room.name}' room {room.room_id}.\n\nShould you need to view "
@@ -301,15 +301,15 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
 
         if config.is_synapse_admin:
             # Try to force join local users
-            for user in users:
-                if user.endswith(f":{config.server_name}"):
-                    try:
-                        synapse_admin.join_user(config, user, new_room.room_id)
-                        logger.debug(f"Successfully joined user {user} to new room {new_room.room_id}")
-                    except Exception as ex:
-                        logger.warning(
-                            f"Failed to join user {user} to new room {new_room.room_id} via Synapse admin: {ex}",
-                        )
+            local_users = [user for user in users if user.endswith(f":{config.server_name}")]
+            if local_users:
+                try:
+                    joined_count = await synapse_admin.join_users(config, local_users, new_room.room_id)
+                    logger.debug(f"Successfully joined {joined_count} local users to new room {new_room.room_id}")
+                except Exception as ex:
+                    logger.warning(
+                        f"Failed to join any local users to new room {new_room.room_id} via Synapse admin: {ex}",
+                    )
 
         return new_room.room_id
     except Exception as ex:
