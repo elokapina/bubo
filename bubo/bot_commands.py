@@ -425,10 +425,6 @@ class Command(object):
                 self.client, self.room.room_id,
                 f"Failed to create new room. Please see logs or contact support.",
             )
-        return await send_text_to_room(
-            self.client, self.room.room_id,
-            f"New room ID is {new_room_id}!",
-        )
 
     async def _unknown_command(self):
         await send_text_to_room(
