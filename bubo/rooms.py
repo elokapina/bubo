@@ -214,11 +214,25 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
     """
     try:
         alias = None
+        alt_aliases = []
         # Remove aliases from the old room
-        if room.canonical_alias:
-            alias = room.canonical_alias
-            logger.debug(f"Removing alias {room.canonical_alias}")
-            await with_ratelimit(client, "room_delete_alias", room_alias=room.canonical_alias)
+        aliases = await client.room_get_state_event(room.room_id, "m.room.canonical_alias")
+        if isinstance(aliases, RoomGetStateEventResponse):
+            alias = aliases.content.get("alias")
+            alt_aliases = aliases.content.get("alt_aliases", [])
+
+        if alias or alt_aliases:
+            logger.info(f"Removing canonical alias {alias} and {len(alt_aliases)} alt aliases from old room")
+            if alias:
+                await client.room_delete_alias(room_alias=alias)
+            await client.room_put_state(
+                room_id=room.room_id,
+                event_type="m.room.canonical_alias",
+                content={
+                    "alias": None,
+                    "alt_aliases": [],
+                },
+            )
 
         # Get room visibility
         room_visibility = await with_ratelimit(client, "room_get_visibility", room_id=room.room_id)
@@ -253,12 +267,13 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
             client,
             "room_create",
             visibility=RoomVisibility(room_visibility.visibility),
-            alias=alias,
             name=room.name,
             topic=room.topic,
             # TODO remove at later stage
             room_version="9",
             federate=federated,
+            # TODO if we're synapse admin, drop out from this list any local users
+            # who we will join via the admin API
             invite=users,
             initial_state=initial_state,
             power_level_override=power_levels.content,
@@ -311,9 +326,27 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
                         f"Failed to join any local users to new room {new_room.room_id} via Synapse admin: {ex}",
                     )
 
+        # Add aliases to the new room
+        if alias or alt_aliases:
+            if alias:
+                await client.room_put_alias(
+                    room_alias=alias,
+                    room_id=new_room.room_id,
+                )
+            await client.room_put_state(
+                room_id=new_room.room_id,
+                event_type="m.room.canonical_alias",
+                content={
+                    "alias": alias,
+                    "alt_aliases": alt_aliases,
+                },
+            )
+
         return new_room.room_id
     except Exception as ex:
+        import traceback
         logger.error(f"Failed to recreate room {room.room_id}: {ex}")
+        logger.error(traceback.format_exc())
         try:
             await send_text_to_room(
                 client,
