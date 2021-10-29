@@ -412,10 +412,10 @@ class Command(object):
                 self.client, self.room.room_id,
                 "Room recreate confirm must be given by the room recreate requester.",
             )
-        if int(time.time()) - room["timestamp"] > 10:
+        if int(time.time()) - room["timestamp"] > 60:
             return await send_text_to_room(
                 self.client, self.room.room_id,
-                "Room recreate confirmation must be given within 10 seconds. Please request recreation again.",
+                "Room recreate confirmation must be given within 60 seconds. Please request recreation again.",
             )
 
         # OK confirmation over, let's do stuff
