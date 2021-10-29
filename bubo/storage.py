@@ -109,6 +109,12 @@ class Storage(object):
         """, (room_id,))
         self.conn.commit()
 
+    def set_room_id(self, alias: str, room_id: str) -> None:
+        self.cursor.execute("""
+            update rooms set room_id = ? where alias = ?;
+        """, (room_id, alias.split(":")[0].strip("#")))
+        self.conn.commit()
+
     def store_breakout_room(self, event_id: str, room_id: str):
         self.cursor.execute("""
             insert into breakout_rooms

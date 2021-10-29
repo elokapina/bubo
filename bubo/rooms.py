@@ -208,7 +208,7 @@ async def get_room_power_levels(
     return state, users
 
 
-async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -> Optional[str]:
+async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, store: Storage) -> Optional[str]:
     """
     Replace a room with a new room.
     """
@@ -337,6 +337,12 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
                     "url": None,
                 },
             )
+
+        # If maintained by Bubo, update the database
+        if alias and alias.endswith(f":{config.server_name}"):
+            maintained_room_id = store.get_room_id(alias)
+            if maintained_room_id:
+                store.set_room_id(alias, new_room.room_id)
 
         # Add aliases to the new room
         if alias or alt_aliases:
