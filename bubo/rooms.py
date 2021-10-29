@@ -263,9 +263,7 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
 
         logger.info(f"Recreating room {room.room_id} for {len(users)} users")
         federated = True if config.rooms.get("recreate_as_federated", False) else room.federate
-        new_room = await with_ratelimit(
-            client,
-            "room_create",
+        new_room = await client.room_create(
             visibility=RoomVisibility(room_visibility.visibility),
             name=room.name,
             topic=room.topic,
@@ -274,7 +272,7 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
             federate=federated,
             # TODO if we're synapse admin, drop out from this list any local users
             # who we will join via the admin API
-            invite=users,
+            invite=list(users),
             initial_state=initial_state,
             power_level_override=power_levels.content,
         )
@@ -285,9 +283,7 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
         logger.info(f"New room id for {room.room_id} is {new_room.room_id}")
 
         # Rename the old room
-        await with_ratelimit(
-            client,
-            "room_put_state",
+        await client.room_put_state(
             room_id=room.room_id,
             event_type="m.room.name",
             content={
@@ -325,6 +321,22 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config) -
                     logger.warning(
                         f"Failed to join any local users to new room {new_room.room_id} via Synapse admin: {ex}",
                     )
+
+        # Move room avatar
+        avatar_state = await client.room_get_state_event(room.room_id, "m.room.avatar")
+        if isinstance(aliases, RoomGetStateEventResponse):
+            await client.room_put_state(
+                room_id=new_room.room_id,
+                event_type="m.room.avatar",
+                content=avatar_state.content,
+            )
+            await client.room_put_state(
+                room_id=new_room.room_id,
+                event_type="m.room.avatar",
+                content={
+                    "url": None,
+                },
+            )
 
         # Add aliases to the new room
         if alias or alt_aliases:
