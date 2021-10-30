@@ -331,7 +331,7 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, s
                 content=avatar_state.content,
             )
             await client.room_put_state(
-                room_id=new_room.room_id,
+                room_id=room.room_id,
                 event_type="m.room.avatar",
                 content={
                     "url": None,
