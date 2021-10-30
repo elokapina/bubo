@@ -291,6 +291,28 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, s
             },
         )
 
+        # Move room avatar
+        avatar_state = await client.room_get_state_event(room.room_id, "m.room.avatar")
+        if isinstance(aliases, RoomGetStateEventResponse):
+            await client.room_put_state(
+                room_id=new_room.room_id,
+                event_type="m.room.avatar",
+                content=avatar_state.content,
+            )
+            await client.room_put_state(
+                room_id=room.room_id,
+                event_type="m.room.avatar",
+                content={
+                    "url": None,
+                },
+            )
+
+        # If maintained by Bubo, update the database
+        if alias and alias.endswith(f":{config.server_name}"):
+            maintained_room_id = store.get_room_id(alias)
+            if maintained_room_id:
+                store.set_room_id(alias, new_room.room_id)
+
         # Post a message to the start of the timeline of the new room and the end of the timeline for the
         # old room
         old_room_link = f"https://matrix.to/#/{room.room_id}?via={config.server_name}"
@@ -321,28 +343,6 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, s
                     logger.warning(
                         f"Failed to join any local users to new room {new_room.room_id} via Synapse admin: {ex}",
                     )
-
-        # Move room avatar
-        avatar_state = await client.room_get_state_event(room.room_id, "m.room.avatar")
-        if isinstance(aliases, RoomGetStateEventResponse):
-            await client.room_put_state(
-                room_id=new_room.room_id,
-                event_type="m.room.avatar",
-                content=avatar_state.content,
-            )
-            await client.room_put_state(
-                room_id=room.room_id,
-                event_type="m.room.avatar",
-                content={
-                    "url": None,
-                },
-            )
-
-        # If maintained by Bubo, update the database
-        if alias and alias.endswith(f":{config.server_name}"):
-            maintained_room_id = store.get_room_id(alias)
-            if maintained_room_id:
-                store.set_room_id(alias, new_room.room_id)
 
         # Add aliases to the new room
         if alias or alt_aliases:
