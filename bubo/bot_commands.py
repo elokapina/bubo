@@ -419,7 +419,7 @@ class Command(object):
             )
 
         # OK confirmation over, let's do stuff
-        new_room_id = await recreate_room(self.room, self.client, self.config)
+        new_room_id = await recreate_room(self.room, self.client, self.config, self.store)
         if not new_room_id:
             return await send_text_to_room(
                 self.client, self.room.room_id,
