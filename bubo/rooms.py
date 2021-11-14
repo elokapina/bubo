@@ -64,6 +64,27 @@ async def ensure_room_encrypted(room_id: str, client: AsyncClient):
                 return ensure_room_encrypted(room_id, client)
 
 
+async def delete_user_room_tag(
+    config: Config, session: aiohttp.ClientSession, user: str, room_id: str, token: str, tag: str,
+) -> bool:
+    async with session.delete(
+            f"{config.homeserver_url}/_matrix/client/r0/user/{user}/rooms/{room_id}/tags/{tag}",
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
+    ) as response:
+        if response.status == 429:
+            await asyncio.sleep(1)
+            return await delete_user_room_tag(config, session, user, room_id, token, tag)
+        try:
+            response.raise_for_status()
+            logger.debug("Delete room tag for user: %s, %s, %s", user, room_id, tag)
+            return True
+        except Exception as ex:
+            logger.warning("Failed to delete room tag %s for user %s for room %s: %s", tag, user, room_id, ex)
+            return False
+
+
 async def ensure_room_power_levels(
         room_id: str, client: AsyncClient, config: Config, members: List,
 ):
@@ -368,7 +389,6 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, s
 
             # Get temporary access tokens for the users
             user_tokens = await synapse_admin.get_temporary_user_tokens(config, local_users)
-            logger.debug("Temporary tokens: %s", user_tokens)
             async with aiohttp.ClientSession() as session:
                 for user, token in user_tokens.items():
                     logger.debug("Room tag tokens: %s, %s", user, token)
@@ -376,7 +396,14 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, s
                     tags = await get_user_room_tags(config, session, user, room.room_id, token)
                     logger.debug("Got tags: %s", tags)
                     if tags:
+                        # Copy to the new room
                         await set_user_room_tags(config, session, user, new_room.room_id, token, tags)
+                        # Remove favourite from old room
+                        if "m.favourite" in tags.keys():
+                            await delete_user_room_tag(config, session, user, room.room_id, token, "m.favourite")
+                    # Mark old room as low priority, if not already
+                    if not tags or "m.lowpriority" not in tags.keys():
+                        await set_user_room_tag(config, session, user, room.room_id, token, "m.lowpriority", 0)
 
         # Add aliases to the new room
         if alias or alt_aliases:

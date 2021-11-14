@@ -43,7 +43,7 @@ async def get_temporary_user_tokens(config: Config, users: List[str]) -> Dict:
         for user in users:
             token = await get_temporary_user_token(config, session, headers, user)
             if token:
-                logger.debug("Got temporary token %s for user %s", token, user)
+                logger.debug("Got temporary token for user %s", user)
                 tokens[user] = token
             else:
                 logger.debug("Failed to get temporary token for user %s", user)
