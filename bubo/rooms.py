@@ -253,6 +253,26 @@ async def get_user_room_tags(
             return
 
 
+async def get_room_directory_status(config: Config, session: aiohttp.ClientSession, room_id: str) -> Optional[str]:
+    async with session.get(
+        f"{config.homeserver_url}/_matrix/client/r0/directory/list/room/{room_id}",
+        headers={
+            "Authorization": f"Bearer {config.user_token}",
+        },
+    ) as response:
+        if response.status == 429:
+            await asyncio.sleep(1)
+            return await get_room_directory_status(config, session, room_id)
+        try:
+            response.raise_for_status()
+            data = await response.json()
+            logger.debug("Got room directory visibility: %s, %s", room_id, data)
+            return data.get("visibility")
+        except Exception as ex:
+            logger.warning("Failed to get room directory visibility for room %s: %s", room_id, ex)
+            return
+
+
 async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, store: Storage) -> Optional[str]:
     """
     Replace a room with a new room.
@@ -375,6 +395,7 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, s
             f"the old room, click this link: {old_room_link}",
         )
 
+        # Various things if Synapse admin
         if config.is_synapse_admin:
             # Try to force join local users
             local_users = [user for user in users if user.endswith(f":{config.server_name}") and user != config.user_id]
@@ -421,6 +442,13 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, s
                 },
             )
 
+        # Room directory
+        async with aiohttp.ClientSession() as session:
+            directory_visibility = await get_room_directory_status(config, session, room.room_id)
+            if directory_visibility == "public":
+                await set_room_directory_status(config, session, room.room_id, "private")
+                await set_room_directory_status(config, session, new_room.room_id, "public")
+
         return new_room.room_id
     except Exception as ex:
         import traceback
@@ -434,6 +462,30 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, s
             )
         except Exception as ex:
             logger.error(f"Failed to inform of error to the room to be recreated: {ex}")
+
+
+async def set_room_directory_status(
+    config: Config, session: aiohttp.ClientSession, room_id: str, visibility: str,
+) -> bool:
+    async with session.put(
+        f"{config.homeserver_url}/_matrix/client/r0/directory/list/room/{room_id}",
+        json={
+            "visibility": visibility,
+        },
+        headers={
+            "Authorization": f"Bearer {config.user_token}",
+        },
+    ) as response:
+        if response.status == 429:
+            await asyncio.sleep(1)
+            return await set_room_directory_status(config, session, room_id, visibility)
+        try:
+            response.raise_for_status()
+            logger.debug("Room directory visibility has been set: %s, %s", room_id, visibility)
+            return True
+        except Exception as ex:
+            logger.warning("Failed to set room directory visibility for room %s: %s", room_id, ex)
+            return False
 
 
 async def set_user_power(
