@@ -1,8 +1,10 @@
+import asyncio
 import logging
 import time
 from copy import deepcopy
 from typing import Tuple, Optional, List, Dict, Union
 
+import aiohttp
 from aiohttp import ClientResponse
 # noinspection PyPackageRequirements
 from nio import (
@@ -208,6 +210,28 @@ async def get_room_power_levels(
     return state, users
 
 
+async def get_user_room_tags(
+    config: Config, session: aiohttp.ClientSession, user: str, room_id: str, token: str,
+) -> Optional[Dict]:
+    async with session.get(
+        f"{config.homeserver_url}/_matrix/client/r0/user/{user}/rooms/{room_id}/tags",
+        headers={
+            "Authorization": f"Bearer {token}",
+        },
+    ) as response:
+        if response.status == 429:
+            await asyncio.sleep(1)
+            return await get_user_room_tags(config, session, user, room_id, token)
+        try:
+            response.raise_for_status()
+            data = await response.json()
+            logger.debug("Got room tags for user: %s, %s, %s", user, room_id, data)
+            return data["tags"]
+        except Exception as ex:
+            logger.warning("Failed to get room tags for user %s for room %s: %s", user, room_id, ex)
+            return
+
+
 async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, store: Storage) -> Optional[str]:
     """
     Replace a room with a new room.
@@ -270,8 +294,6 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, s
             # TODO remove at later stage
             room_version="9",
             federate=federated,
-            # TODO if we're synapse admin, drop out from this list any local users
-            # who we will join via the admin API
             invite=list(users),
             initial_state=initial_state,
             power_level_override=power_levels.content,
@@ -334,7 +356,7 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, s
 
         if config.is_synapse_admin:
             # Try to force join local users
-            local_users = [user for user in users if user.endswith(f":{config.server_name}")]
+            local_users = [user for user in users if user.endswith(f":{config.server_name}") and user != config.user_id]
             if local_users:
                 try:
                     joined_count = await synapse_admin.join_users(config, local_users, new_room.room_id)
@@ -343,6 +365,18 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, s
                     logger.warning(
                         f"Failed to join any local users to new room {new_room.room_id} via Synapse admin: {ex}",
                     )
+
+            # Get temporary access tokens for the users
+            user_tokens = await synapse_admin.get_temporary_user_tokens(config, local_users)
+            logger.debug("Temporary tokens: %s", user_tokens)
+            async with aiohttp.ClientSession() as session:
+                for user, token in user_tokens.items():
+                    logger.debug("Room tag tokens: %s, %s", user, token)
+                    # Copy over room tags
+                    tags = await get_user_room_tags(config, session, user, room.room_id, token)
+                    logger.debug("Got tags: %s", tags)
+                    if tags:
+                        await set_user_room_tags(config, session, user, new_room.room_id, token, tags)
 
         # Add aliases to the new room
         if alias or alt_aliases:
@@ -408,6 +442,37 @@ async def set_user_power(
     )
     logger.debug(f"Power levels update response: {response}")
     return response
+
+
+async def set_user_room_tag(
+    config: Config, session: aiohttp.ClientSession, user: str, room_id: str, token: str, tag: str, order: float,
+) -> bool:
+    async with session.put(
+            f"{config.homeserver_url}/_matrix/client/r0/user/{user}/rooms/{room_id}/tags/{tag}",
+            json={
+                "order": order,
+            },
+            headers={
+                "Authorization": f"Bearer {token}",
+            },
+    ) as response:
+        if response.status == 429:
+            await asyncio.sleep(1)
+            return await set_user_room_tag(config, session, user, room_id, token, tag, order)
+        try:
+            response.raise_for_status()
+            logger.debug("Set room tag for user: %s, %s, %s", user, room_id, tag)
+            return True
+        except Exception as ex:
+            logger.warning("Failed to set room tag %s for user %s for room %s: %s", tag, user, room_id, ex)
+            return False
+
+
+async def set_user_room_tags(
+    config: Config, session: aiohttp.ClientSession, user: str, room_id: str, token: str, tags: Dict,
+) -> None:
+    for tag, data in tags.items():
+        await set_user_room_tag(config, session, user, room_id, token, tag, data.get("order"))
 
 
 async def maintain_configured_rooms(client: AsyncClient, store: Storage, config: Config):

@@ -37,6 +37,8 @@ async def get_users_for_access(client: AsyncClient, config: Config, access_type:
     return set(users)
 
 
+# TODO remove usage of this wrapper for any matrix-nio calls
+# Reading that code it seems it already handles rate limits 😅
 async def with_ratelimit(client: AsyncClient, method: str, *args, **kwargs):
     func = getattr(client, method)
     response = await func(*args, **kwargs)
