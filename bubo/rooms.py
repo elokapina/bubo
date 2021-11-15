@@ -273,7 +273,9 @@ async def get_room_directory_status(config: Config, session: aiohttp.ClientSessi
             return
 
 
-async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, store: Storage) -> Optional[str]:
+async def recreate_room(
+    room: MatrixRoom, client: AsyncClient, config: Config, store: Storage, last_event_id: str,
+) -> Optional[str]:
     """
     Replace a room with a new room.
     """
@@ -338,6 +340,10 @@ async def recreate_room(room: MatrixRoom, client: AsyncClient, config: Config, s
             invite=list(users),
             initial_state=initial_state,
             power_level_override=power_levels.content,
+            predecessor={
+                "event_id": last_event_id,
+                "room_id": room.room_id,
+            },
         )
         if isinstance(new_room, RoomCreateError):
             logger.warning(f"Failed to create new room: {new_room.status_code} / {new_room.message}")
