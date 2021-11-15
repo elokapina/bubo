@@ -74,6 +74,7 @@ class Config(object):
         self.device_name = self._get_cfg(["matrix", "device_name"], default="nio-template")
         self.homeserver_url = self._get_cfg(["matrix", "homeserver_url"], required=True)
         self.server_name = self._get_cfg(["matrix", "server_name"], required=True)
+        self.is_synapse_admin = self._get_cfg(["matrix", "is_synapse_admin"], required=False, default=False)
 
         self.command_prefix = self._get_cfg(["command_prefix"], default="!c") + " "
 

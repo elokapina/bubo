@@ -39,6 +39,29 @@ Subcommands:
 * `list-no-admin`
 
   List any rooms Bubo maintains where Bubo lacks admin privileges. 
+  
+* `recreate`
+
+  Recreate the current room.
+"""
+
+HELP_ROOMS_RECREATE = """Recreates a room.
+
+This command is useful for example if the room has no admins. It will recreate the room using the bot,
+which means there will again be an admin in the room. Local members will be force joined to the room if
+the bot has server admin permissions on a Synapse server. Otherwise invitations will be used to get users
+to the new room.
+
+Requires bot administrator permissions.
+
+First issue this command without any parameters. Then issue it again with the `confirm` parameter within ten seconds.
+This action cannot be reversed so care should be taken.
+"""
+
+HELP_ROOMS_RECREATE_CONFIRM = """Please confirm room re-create with the command `%srooms recreate confirm`.
+You have 60s to confirm before this request expires.
+
+**This is destructive, the room will be replaced. This cannot be reversed!**
 """
 
 HELP_USERS = """List or manage users.

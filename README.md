@@ -156,6 +156,28 @@ Same as without a subcommand, Bubo will tell you all about the rooms it maintain
 
 List any rooms Bubo maintains where Bubo lacks admin privileges. 
 
+* `recreate`
+
+Recreate a room. This is a bit like the room upgrade functionality in Element, but it's designed to
+also work when admin power levels have been lost in the room, and thus an upgrade cannot be done.
+In short the command will:
+
+  * Create a new room mirroring the current room
+  * Rename the old room with a prefix (defaults to "OLD", see config to change it)
+  * Invite all room members (including those in invite status) to the new room
+  * Try to force join local server members using the Synapse admin API if Bubo has
+    been defined as Synapse admin in config (and of course in Synapse too)
+  * Post a message to both rooms, linking them together
+  * Optionally join a configured secondary admin to the room
+
+After giving the command in the room, Bubo will ask for confirmation.
+
+**NOTE** This command cannot be reversed so should be used with care. The old room will however
+stay as it is, so in problem cases it should be enough to just rename the old room back.
+
+This command requires Bubo admin privileges. It does not require Bubo to have any special power
+in the room to be recreated.
+
 #### `users`
 
 Manage users of an identity provider.

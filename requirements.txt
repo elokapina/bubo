@@ -1,7 +1,12 @@
 git+https://github.com/jaywink/aiolog.git@matrix-handler#egg=aiolog
 aiohttp
 email-validator>=1.1.2
-matrix-nio[e2e]>=0.18.0
+
+# Running on fork commit for the following:
+# - predecessor support in room create - https://github.com/jaywink/matrix-nio/commit/dcd1ed13a6f8d64fe25ea53c91b5ac2336c9f8d8
+#matrix-nio[e2e]>=0.18.0
+git+https://github.com/jaywink/matrix-nio.git@dcd1ed13a6f8d64fe25ea53c91b5ac2336c9f8d8#egg=matrix-nio[e2e]==0.18.7.1
+
 Markdown>=3.1.1
 python-keycloak>=0.24.0
 PyYAML>=5.1.2

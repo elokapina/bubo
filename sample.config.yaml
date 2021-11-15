@@ -22,6 +22,9 @@ matrix:
   device_id: ABCDEFGHIJ
   # What to name the logged in device
   device_name: bubo
+  # Has Synapse admin?
+  # Set to true if Bubo has Synapse admin API access
+  is_synapse_admin: false
 
 # Different commands might require a permission.
 # Here we list the minimum permission needed for the command.
@@ -107,6 +110,14 @@ rooms:
     users_default: 0
   # Should bubo enforce the default power levels in old rooms as well?
   enforce_power_in_old_rooms: true
+  # Secondary admin to invite to maintained rooms (optional)
+  #secondary_admin: "@user:domain.tld"
+  # Always recreate rooms in federated mode
+  # Useful to set when some rooms have been created as non-federated and the
+  # room recreate is used to create new versions in federated mode.
+  recreate_as_federated: false
+  # Prefix to use when renaming old recreated rooms
+  recreate_old_room_name_prefix: "OLD"
 
 # Configuration related to bot callbacks
 callbacks:

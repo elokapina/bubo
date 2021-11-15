@@ -1,10 +1,11 @@
 import logging
+import time
 from importlib import import_module
 from typing import Optional, List
 
 import sqlite3
 
-latest_db_version = 7
+latest_db_version = 8
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,12 @@ class Storage(object):
             self.conn.commit()
             logger.info(f"...done")
 
+    def delete_recreate_room(self, room_id: str):
+        self.cursor.execute("""
+            delete from recreate_rooms where room_id = ?;
+        """, (room_id,))
+        self.conn.commit()
+
     def get_breakout_room_id(self, event_id: str):
         results = self.cursor.execute("""
             select room_id from breakout_rooms where event_id = ?;
@@ -75,6 +82,12 @@ class Storage(object):
         room = results.fetchone()
         if room:
             return room[0]
+
+    def get_recreate_room(self, room_id: str):
+        results = self.cursor.execute("""
+            select requester, timestamp, applied from recreate_rooms where room_id = ?;
+        """, (room_id,))
+        return results.fetchone()
 
     def get_room_id(self, alias: str) -> Optional[str]:
         results = self.cursor.execute("""
@@ -90,6 +103,18 @@ class Storage(object):
         """)
         return results.fetchall()
 
+    def set_recreate_room_applied(self, room_id: str):
+        self.cursor.execute("""
+            update recreate_rooms set applied = 1 where room_id = ?; 
+        """, (room_id,))
+        self.conn.commit()
+
+    def set_room_id(self, alias: str, room_id: str) -> None:
+        self.cursor.execute("""
+            update rooms set room_id = ? where alias = ?;
+        """, (room_id, alias.split(":")[0].strip("#")))
+        self.conn.commit()
+
     def store_breakout_room(self, event_id: str, room_id: str):
         self.cursor.execute("""
             insert into breakout_rooms
@@ -104,4 +129,13 @@ class Storage(object):
                 (name, alias, title) values 
                 (?, ?, ?);
         """, (name, alias, title))
+        self.conn.commit()
+
+    def store_recreate_room(self, requester: str, room_id: str):
+        timestamp = int(time.time())
+        self.cursor.execute("""
+            insert into recreate_rooms
+                (requester, room_id, timestamp) values 
+                (?, ?, ?);
+        """, (requester, room_id, timestamp))
         self.conn.commit()

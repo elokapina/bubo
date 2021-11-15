@@ -34,6 +34,9 @@
 * Added rooms `list-no-admin` subcommand. Lists all the rooms that Bubo should be maintaining,
   but which is lacks admin rights to do so for.
 
+* Added rooms `recreate` subcommand. Recreates a room, specifically designed for the case where
+  admin permissions have been lost and a new room is needed.
+
 ### Changed
 
 * Message edits are now understood as new commands from clients that send them 
