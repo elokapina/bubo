@@ -334,8 +334,6 @@ async def recreate_room(
             visibility=RoomVisibility(room_visibility.visibility),
             name=room.name,
             topic=room.topic,
-            # TODO remove at later stage
-            room_version="9",
             federate=federated,
             invite=list(users),
             initial_state=initial_state,
