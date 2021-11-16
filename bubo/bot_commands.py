@@ -187,56 +187,46 @@ class Command(object):
         if not await self._ensure_coordinator():
             return
         if not self.args or self.args[0] == "help":
-            text = "Need more information. Either specify a room alias to invite you to or room and users to invite " \
-                   "someone else to. Requires coordinator privileges.\n" \
-                   "\n" \
-                   "Examples:\n" \
-                   "\n" \
-                   "Invite yourself to a room maintained by the bot:\n" \
-                   "\n" \
-                   "  *invite #room:example.com*\n" \
-                   "\n" \
-                   "Invite one or more users to a room maintained by the bot:\n" \
-                   "\n" \
-                   "  *invite #room:example.com @user1:example.com @user2:example.org*"
-            await send_text_to_room(self.client, self.room.room_id, text)
+            await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_INVITE)
             return
-        if not self.args[0].startswith("#"):
+
+        try:
+            room_id = self.args[0]
+            if room_id.startswith("#"):
+                response = await self.client.room_resolve_alias(f"{room_id}")
+                room_id = response.room_id
+        except AttributeError:
             await send_text_to_room(
                 self.client,
                 self.room.room_id,
-                f"That first argument doesn't look like a room alias.",
+                f"Could not resolve room ID. Please ensure room exists.",
             )
-            return
-
-        room_id = self.store.get_room_id(self.args[0])
-        if not room_id:
+        except IndexError:
             await send_text_to_room(
                 self.client,
                 self.room.room_id,
-                f"Could not find room ID in my database for room {self.args[0]}",
+                f"Cannot understand arguments.\n\n{help_strings.HELP_INVITE}",
             )
-            return
-
-        if len(self.args) == 1:
-            await invite_to_room(self.client, room_id, self.event.sender, self.room.room_id, self.args[0])
-            return
         else:
-            for counter, user_id in enumerate(self.args, 1):
-                if counter == 1:
-                    # Skip the room ID
-                    continue
-                try:
-                    check_user_id(user_id)
-                except ValueError:
-                    await send_text_to_room(
-                        self.client,
-                        self.room.room_id,
-                        f"Invalid user mxid: {user_id}",
-                    )
-                else:
-                    await invite_to_room(self.client, room_id, user_id, self.room.room_id, self.args[0])
-            return
+            if len(self.args) == 1:
+                await invite_to_room(self.client, room_id, self.event.sender, self.room.room_id, self.args[0])
+                return
+            else:
+                for counter, user_id in enumerate(self.args, 1):
+                    if counter == 1:
+                        # Skip the room ID
+                        continue
+                    try:
+                        check_user_id(user_id)
+                    except ValueError:
+                        await send_text_to_room(
+                            self.client,
+                            self.room.room_id,
+                            f"Invalid user mxid: {user_id}",
+                        )
+                    else:
+                        await invite_to_room(self.client, room_id, user_id, self.room.room_id, self.args[0])
+                return
 
     async def _power(self):
         """Set power in a room.

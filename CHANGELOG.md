@@ -42,6 +42,10 @@
 * Message edits are now understood as new commands from clients that send them 
   prefixed with ` * ` (for example Element).
 
+* Invite command no longer requires room to be maintained by Bubo. It's enough now that
+  Bubo is in the room and able to invite to it. It also now works with room ID in
+  addition to alias.
+
 ### Fixed
 
 * Don't fail to start up if `matrix.user_token` is not set (but password is).

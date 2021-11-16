@@ -14,6 +14,27 @@ More help on commands or subcommands using 'help' as the next parameter.
 For source code, see https://github.com/elokapina/bubo
 """
 
+HELP_INVITE = """"Invite to rooms.
+
+When given with only a room alias or ID parameter, invites you to that room.
+
+To invite other users, give one or more user ID's (separated by a space) after
+the room alias or ID. 
+
+Examples:
+
+* Invite yourself to a room:
+
+  `invite #room:example.com
+                   
+* Invite one or more users to a room:
+                   
+  `invite #room:example.com @user1:example.com @user2:example.org`
+  
+Requires bot coordinator privileges. The bot must be in the room
+and with power to invite users.  
+"""
+
 HELP_ROOMS = """Maintains rooms.
 
 When given without parameters, Bubo will tell you about the rooms it maintains.
