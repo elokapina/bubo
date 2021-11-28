@@ -5,7 +5,7 @@ import time
 
 from email_validator import validate_email, EmailNotValidError
 # noinspection PyPackageRequirements
-from nio import RoomPutStateError, RoomGetStateEventError, RoomPutStateResponse
+from nio import RoomPutStateError, RoomGetStateEventError, RoomPutStateResponse, ProtocolError
 # noinspection PyPackageRequirements
 from nio.schemas import check_user_id
 
@@ -14,7 +14,7 @@ from bubo.chat_functions import send_text_to_room, invite_to_room
 from bubo.communities import ensure_community_exists
 from bubo.rooms import ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels, recreate_room
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
-from bubo.utils import get_users_for_access, with_ratelimit
+from bubo.utils import get_users_for_access, with_ratelimit, ensure_room_id
 
 logger = logging.getLogger(__name__)
 
@@ -191,11 +191,8 @@ class Command(object):
             return
 
         try:
-            room_id = self.args[0]
-            if room_id.startswith("#"):
-                response = await self.client.room_resolve_alias(f"{room_id}")
-                room_id = response.room_id
-        except AttributeError:
+            room_id = await ensure_room_id(self.client, self.args[0])
+        except (AttributeError, ProtocolError):
             await send_text_to_room(
                 self.client,
                 self.room.room_id,
@@ -295,6 +292,7 @@ class Command(object):
         """List and operate on rooms"""
         if not await self._ensure_coordinator():
             return
+        text = None
         if self.args:
             if self.args[0] == "create":
                 # Create a rooms
@@ -329,11 +327,16 @@ class Command(object):
                 text = await self._list_no_admin_rooms()
             elif self.args[0] == 'recreate':
                 return await self._recreate_room(subcommand=self.args[1] if len(self.args) > 1 else None)
+            elif self.args[0] == 'unlink':
+                await self._unlink_room(leave=False)
+            elif self.args[0] == 'unlink-and-leave':
+                await self._unlink_room(leave=True)
             else:
                 text = "Unknown subcommand!"
         else:
             text = await self._list_rooms()
-        await send_text_to_room(self.client, self.room.room_id, text)
+        if text:
+            await send_text_to_room(self.client, self.room.room_id, text)
 
     async def _list_no_admin_rooms(self):
         text = "I lack admin power in the following rooms I maintain:\n\n"
@@ -421,6 +424,42 @@ class Command(object):
             self.client,
             self.room.room_id,
             f"Unknown command '{self.command}'. Try the 'help' command for more information.",
+        )
+
+    async def _unlink_room(self, leave: bool):
+        """
+        Unlink the room by removing from Bubo room database.
+
+        Optionally leave the room as well.
+        """
+        if not await self._ensure_coordinator():
+            return
+
+        if len(self.args) < 2:
+            return await send_text_to_room(
+                self.client, self.room.room_id, help_strings.HELP_ROOMS_UNLINK,
+            )
+        try:
+            room_id = await ensure_room_id(self.client, self.args[1])
+        except (KeyError, ProtocolError):
+            return await send_text_to_room(
+                self.client, self.room.room_id, f"Error resolving room ID",
+            )
+
+        room = self.store.get_room(room_id)
+        if not room:
+            return await send_text_to_room(
+                self.client, self.room.room_id, f"Cannot unlink room {room_id} which doesn't seem tracked by Bubo",
+            )
+
+        self.store.unlink_room(room_id)
+
+        if leave:
+            await self.client.room_leave(room_id)
+
+        return await send_text_to_room(
+            self.client, self.room.room_id, f"Room {room_id} has been removed from Bubo database."
+                                            f"{' Bubo has also left the room' if leave else ''}",
         )
 
     async def _users(self):

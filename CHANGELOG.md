@@ -37,6 +37,9 @@
 * Added rooms `recreate` subcommand. Recreates a room, specifically designed for the case where
   admin permissions have been lost and a new room is needed.
 
+* Added rooms `unlink` and `unlink-and-leave` subcommands. The first variant unlinks a room
+  tracked by Bubo, the second also leaves the room.
+
 ### Changed
 
 * Message edits are now understood as new commands from clients that send them 

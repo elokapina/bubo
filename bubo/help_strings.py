@@ -64,6 +64,14 @@ Subcommands:
 * `recreate`
 
   Recreate the current room.
+  
+* `unlink`
+
+  Remove the room from Bubo's room database. The only parameter is a room ID or alias.
+  
+* `unlink-and-leave`
+
+  Remove the room from Bubo's room database, then leave the room. The only parameter is a room ID or alias.
 """
 
 HELP_ROOMS_RECREATE = """Recreates a room.
@@ -83,6 +91,13 @@ HELP_ROOMS_RECREATE_CONFIRM = """Please confirm room re-create with the command 
 You have 60s to confirm before this request expires.
 
 **This is destructive, the room will be replaced. This cannot be reversed!**
+"""
+
+HELP_ROOMS_UNLINK = """Give the room ID or alias to unlink as the first parameter. For example:
+
+`unlink #myroom:domain.tld`
+
+To also make Bubo leave the room, use the `unlink-and-leave` command variant.
 """
 
 HELP_USERS = """List or manage users.

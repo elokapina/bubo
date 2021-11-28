@@ -89,6 +89,12 @@ class Storage(object):
         """, (room_id,))
         return results.fetchone()
 
+    def get_room(self, room_id: str) -> Optional[str]:
+        results = self.cursor.execute("""
+            select * from rooms where room_id = ?
+        """, (room_id,))
+        return results.fetchone()
+
     def get_room_id(self, alias: str) -> Optional[str]:
         results = self.cursor.execute("""
             select room_id from rooms where alias = ?
@@ -138,4 +144,10 @@ class Storage(object):
                 (requester, room_id, timestamp) values 
                 (?, ?, ?);
         """, (requester, room_id, timestamp))
+        self.conn.commit()
+
+    def unlink_room(self, room_id: str):
+        self.cursor.execute("""
+            delete from rooms where room_id = ?
+        """, (room_id,))
         self.conn.commit()

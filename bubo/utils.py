@@ -3,11 +3,20 @@ import time
 from typing import Set
 
 # noinspection PyPackageRequirements
-from nio import AsyncClient, JoinedMembersResponse
+from nio import AsyncClient, JoinedMembersResponse, RoomResolveAliasError, ProtocolError
 
 from bubo.config import Config
 
 logger = logging.getLogger(__name__)
+
+
+async def ensure_room_id(client: AsyncClient, room_id_or_alias: str) -> str:
+    if room_id_or_alias.startswith("#"):
+        response = await client.room_resolve_alias(room_id_or_alias)
+        if isinstance(response, RoomResolveAliasError):
+            raise ProtocolError(f"Could not resolve {room_id_or_alias} room ID")
+        return response.room_id
+    return room_id_or_alias
 
 
 def get_request_headers(config):
