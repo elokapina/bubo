@@ -177,6 +177,14 @@ stay as it is, so in problem cases it should be enough to just rename the old ro
 
 This command requires Bubo admin privileges. It does not require Bubo to have any special power
 in the room to be recreated.
+ 
+* `unlink`
+
+  Remove the room from Bubo's room database. The only parameter is a room ID or alias.
+  
+* `unlink-and-leave`
+
+  Remove the room from Bubo's room database, then leave the room. The only parameter is a room ID or alias.
 
 #### `users`
 
