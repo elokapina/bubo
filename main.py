@@ -14,12 +14,14 @@ from aiohttp import (
 from nio import (
     AsyncClient,
     AsyncClientConfig,
-    RoomMessageText,
+    ForwardedRoomKeyEvent, 
     InviteMemberEvent,
-    LoginError,
     LocalProtocolError,
+    LoginError,
     MegolmEvent,
-    UnknownEvent,
+    RoomKeyEvent,
+    RoomMessageText,
+    UnknownEvent, 
 )
 
 from bubo.callbacks import Callbacks
@@ -66,6 +68,8 @@ async def main(config: Config):
     # Nio doesn't currently have m.reaction events so we catch UnknownEvent for reactions and filter there
     # noinspection PyTypeChecker
     client.add_event_callback(callbacks.reaction, (UnknownEvent,))
+    # noinspection PyTypeChecker
+    client.add_to_device_callback(callbacks.room_key, (ForwardedRoomKeyEvent, RoomKeyEvent))
 
     # Keep trying to reconnect on failure (with some time in-between)
     while True:
