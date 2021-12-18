@@ -49,6 +49,8 @@
   Bubo is in the room and able to invite to it. It also now works with room ID in
   addition to alias.
 
+* Produce a more useful log error when Bubo fails to decrypt an event.
+
 ### Fixed
 
 * Don't fail to start up if `matrix.user_token` is not set (but password is).

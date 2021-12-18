@@ -1,5 +1,5 @@
 # noinspection PyPackageRequirements
-from nio import JoinError
+from nio import JoinError, MatrixRoom, Event
 
 from bubo.bot_commands import Command
 from bubo.chat_functions import send_text_to_room, invite_to_room
@@ -112,16 +112,11 @@ class Callbacks(object):
         # Successfully joined room
         logger.info(f"Joined {room.room_id}")
 
-    async def decryption_failure(self, room, event):
-        """Callback for when an event fails to decrypt. Inform the user"""
+    async def decryption_failure(self, room: MatrixRoom, event: Event):
+        """Callback for when an event fails to decrypt."""
         logger.error(
-            f"Failed to decrypt event '{event.event_id}' in room '{room.room_id}'!"
-            f"\n\n"
-            f"Tip: try using a different device ID in your config file and restart."
-            f"\n\n"
-            f"If all else fails, delete your store directory and let the bot recreate "
-            f"it (your reminders will NOT be deleted, but the bot may respond to existing "
-            f"commands a second time)."
+            f"Failed to decrypt event {event.event_id} in room {room.name} ({room.canonical_alias} / {room.room_id}) "
+            f"from sender {event.sender}."
         )
         if self.config.callbacks.get("unable_to_decrypt_responses", True):
             user_msg = (
