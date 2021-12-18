@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 from dataclasses import asdict
@@ -155,11 +156,12 @@ class Storage(object):
     def store_encrypted_event(self, event: MegolmEvent):
         try:
             event_dict = asdict(event)
+            event_json = json.dumps(event_dict)
             self.cursor.execute("""
                 insert into encrypted_events
                     (device_id, event_id, room_id, session_id, event) values
                     (?, ?, ?, ?, ?)
-            """, (event.device_id, event.event_id, event.room_id, event.session_id, event_dict))
+            """, (event.device_id, event.event_id, event.room_id, event.session_id, event_json))
             self.conn.commit()
         except Exception as ex:
             logger.error("Failed to store encrypted event %s: %s" % (event.event_id, ex))

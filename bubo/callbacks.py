@@ -1,3 +1,4 @@
+import json
 from typing import Union
 
 # noinspection PyPackageRequirements
@@ -111,7 +112,8 @@ class Callbacks(object):
 
         for encrypted_event in events:
             try:
-                megolm_event = MegolmEvent.from_dict(encrypted_event["event"])
+                event_dict = json.loads(encrypted_event["event"])
+                megolm_event = MegolmEvent.from_dict(event_dict)
             except Exception as ex:
                 logger.warning("Failed to restore MegolmEvent for %s: %s" % (encrypted_event["event_id"], ex))
                 continue
