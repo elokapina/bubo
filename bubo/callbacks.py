@@ -113,7 +113,7 @@ class Callbacks(object):
         for encrypted_event in events:
             try:
                 event_dict = json.loads(encrypted_event["event"])
-                megolm_event = MegolmEvent.from_dict(event_dict)
+                megolm_event = MegolmEvent.from_dict(event_dict["source"])
             except Exception as ex:
                 logger.warning("Failed to restore MegolmEvent for %s: %s" % (encrypted_event["event_id"], ex))
                 continue
