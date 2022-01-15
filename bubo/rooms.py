@@ -9,7 +9,7 @@ from aiohttp import ClientResponse
 # noinspection PyPackageRequirements
 from nio import (
     AsyncClient, RoomVisibility, EnableEncryptionBuilder, RoomPutStateError, RoomGetStateEventError,
-    RoomPutStateResponse, RoomGetStateEventResponse, MatrixRoom, RoomCreateError,
+    RoomPutStateResponse, RoomGetStateEventResponse, MatrixRoom, RoomCreateError, RoomInviteError,
 )
 # noinspection PyPackageRequirements
 from nio.http import TransportResponse
@@ -305,10 +305,24 @@ async def recreate_room(
         room_visibility = await with_ratelimit(client, "room_get_visibility", room_id=room.room_id)
         logger.debug(f"Room visibility is: {room_visibility}")
 
-        # Create new room
+        # Calculate users
         users = {user.user_id for user in room.users.values() if user.user_id != config.user_id}
         invited_users = {user.user_id for user in room.invited_users.values() if user.user_id != config.user_id}
         users = users.union(invited_users)
+
+        # Power levels
+        power_levels, _users = await get_room_power_levels(client, room.room_id)
+        # Ensure we don't immediately demote ourselves
+        power_levels.content["users"][config.user_id] = 100
+        # Add secondary admin if configured
+        if config.rooms.get("secondary_admin"):
+            users.add(config.rooms.get("secondary_admin"))
+            power_levels.content["users"][config.rooms.get("secondary_admin")] = 100
+
+        # Create new room
+        local_users = [user for user in users if user.endswith(f":{config.server_name}") and user != config.user_id]
+        remote_users = [user for user in users if not user.endswith(f":{config.server_name}")
+                        and user != config.user_id]
         initial_state = []
         if room.encrypted:
             initial_state.append({
@@ -320,13 +334,6 @@ async def recreate_room(
                     "rotation_period_msgs": 100,
                 },
             })
-        power_levels, _users = await get_room_power_levels(client, room.room_id)
-        # Ensure we don't immediately demote ourselves
-        power_levels.content["users"][config.user_id] = 100
-        # Add secondary admin if configured
-        if config.rooms.get("secondary_admin"):
-            users.add(config.rooms.get("secondary_admin"))
-            power_levels.content["users"][config.rooms.get("secondary_admin")] = 100
 
         logger.info(f"Recreating room {room.room_id} for {len(users)} users")
         federated = True if config.rooms.get("recreate_as_federated", False) else room.federate
@@ -335,7 +342,6 @@ async def recreate_room(
             name=room.name,
             topic=room.topic,
             federate=federated,
-            invite=list(users),
             initial_state=initial_state,
             power_level_override=power_levels.content,
             predecessor={
@@ -380,29 +386,9 @@ async def recreate_room(
             if maintained_room_id:
                 store.set_room_id(alias, new_room.room_id)
 
-        # Post a message to the start of the timeline of the new room and the end of the timeline for the
-        # old room
-        old_room_link = f"https://matrix.to/#/{room.room_id}?via={config.server_name}"
-        new_room_link = f"https://matrix.to/#/{new_room.room_id}?via={config.server_name}"
-        await send_text_to_room(
-            client,
-            room.room_id,
-            f"#### This room has been replaced\n\nTo continue discussion in the new room, click this "
-            f"link: {new_room_link}",
-        )
-        # Unfortunately we can't use matrix-nio here as it doesn't know about the room and will die with
-        # LocalProtocolError as it fails to find the room in its local cache. Use the C2S API directly.
-        await send_text_to_room_c2s(
-            config,
-            new_room.room_id,
-            f"#### This room replaces the old '{room.name}' room {room.room_id}.\n\nShould you need to view "
-            f"the old room, click this link: {old_room_link}",
-        )
-
-        # Various things if Synapse admin
+        # Various things if Synapse admin for local users
         if config.is_synapse_admin:
             # Try to force join local users
-            local_users = [user for user in users if user.endswith(f":{config.server_name}") and user != config.user_id]
             if local_users:
                 try:
                     joined_count = await synapse_admin.join_users(config, local_users, new_room.room_id)
@@ -430,6 +416,17 @@ async def recreate_room(
                     if not tags or "m.lowpriority" not in tags.keys():
                         await set_user_room_tag(config, session, user, room.room_id, token, "m.lowpriority", 0)
 
+        # Invites, all if not synapse admin, remote if locals were joined already
+        invite_users = remote_users
+        if not config.is_synapse_admin:
+            invite_users = invite_users + remote_users
+
+        for user in invite_users:
+            response = await client.room_invite(new_room.room_id, user)
+            if isinstance(response, RoomInviteError):
+                logger.warning(f"Failed to invite user {user} to new room {new_room.room_id}: "
+                               f"{response.message} / {response.status_code}")
+
         # Add aliases to the new room
         if alias or alt_aliases:
             if alias:
@@ -452,6 +449,25 @@ async def recreate_room(
             if directory_visibility == "public":
                 await set_room_directory_status(config, session, room.room_id, "private")
                 await set_room_directory_status(config, session, new_room.room_id, "public")
+
+        # Post a message to the start of the timeline of the new room and the end of the timeline for the
+        # old room
+        old_room_link = f"https://matrix.to/#/{room.room_id}?via={config.server_name}"
+        new_room_link = f"https://matrix.to/#/{new_room.room_id}?via={config.server_name}"
+        await send_text_to_room(
+            client,
+            room.room_id,
+            f"#### This room has been replaced\n\nTo continue discussion in the new room, click this "
+            f"link: {new_room_link}",
+        )
+        # Unfortunately we can't use matrix-nio here as it doesn't know about the room and will die with
+        # LocalProtocolError as it fails to find the room in its local cache. Use the C2S API directly.
+        await send_text_to_room_c2s(
+            config,
+            new_room.room_id,
+            f"#### This room replaces the old '{room.name}' room {room.room_id}.\n\nShould you need to view "
+            f"the old room, click this link: {old_room_link}",
+        )
 
         return new_room.room_id
     except Exception as ex:
