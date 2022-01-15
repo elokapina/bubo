@@ -1,11 +1,15 @@
+import json
 import logging
 import time
+from dataclasses import asdict
 from importlib import import_module
 from typing import Optional, List
 
 import sqlite3
+# noinspection PyPackageRequirements
+from nio import MegolmEvent
 
-latest_db_version = 8
+latest_db_version = 9
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +87,12 @@ class Storage(object):
         if room:
             return room[0]
 
+    def get_encrypted_events(self, session_id: str):
+        results = self.cursor.execute("""
+            select * from encrypted_events where session_id = ?;
+        """, (session_id,))
+        return results.fetchall()
+
     def get_recreate_room(self, room_id: str):
         results = self.cursor.execute("""
             select requester, timestamp, applied from recreate_rooms where room_id = ?;
@@ -108,6 +118,12 @@ class Storage(object):
             select * from rooms
         """)
         return results.fetchall()
+
+    def remove_encrypted_event(self, event_id: str):
+        self.cursor.execute("""
+            delete from encrypted_events where event_id = ?;
+        """, (event_id,))
+        self.conn.commit()
 
     def set_recreate_room_applied(self, room_id: str):
         self.cursor.execute("""
@@ -136,6 +152,19 @@ class Storage(object):
                 (?, ?, ?);
         """, (name, alias, title))
         self.conn.commit()
+
+    def store_encrypted_event(self, event: MegolmEvent):
+        try:
+            event_dict = asdict(event)
+            event_json = json.dumps(event_dict)
+            self.cursor.execute("""
+                insert into encrypted_events
+                    (device_id, event_id, room_id, session_id, event) values
+                    (?, ?, ?, ?, ?)
+            """, (event.device_id, event.event_id, event.room_id, event.session_id, event_json))
+            self.conn.commit()
+        except Exception as ex:
+            logger.error("Failed to store encrypted event %s: %s" % (event.event_id, ex))
 
     def store_recreate_room(self, requester: str, room_id: str):
         timestamp = int(time.time())
