@@ -366,7 +366,7 @@ async def recreate_room(
 
         # Move room avatar
         avatar_state = await client.room_get_state_event(room.room_id, "m.room.avatar")
-        if isinstance(aliases, RoomGetStateEventResponse):
+        if isinstance(avatar_state, RoomGetStateEventResponse):
             await client.room_put_state(
                 room_id=new_room.room_id,
                 event_type="m.room.avatar",
