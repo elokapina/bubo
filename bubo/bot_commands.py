@@ -145,7 +145,9 @@ class Command(object):
                 params = csv.reader([' '.join(args)], delimiter=" ")
                 params = [param for param in params][0]
                 if len(params) != 3 or params[0] == "help":
-                    text = "Wrong number of arguments. Usage:\n" \
+                    text = "NOTE! Communities support is deprecated and will be removed in Bubo v0.4.0.\n" \
+                           "\n" \
+                           "Wrong number of arguments. Usage:\n" \
                            "\n" \
                            "`communities create NAME ALIAS TITLE`\n" \
                            "\n" \
@@ -160,18 +162,24 @@ class Command(object):
                         self.config,
                     )
                     if result == "created":
-                        text = f"Community {params[0]} (+{params[1]}:{self.config.server_name}) " \
+                        text = f"NOTE! Communities support is deprecated and will be removed in Bubo v0.4.0.\n" \
+                               f"\n" \
+                               f"Community {params[0]} (+{params[1]}:{self.config.server_name}) " \
                                f"created successfully."
                         self.store.store_community(params[0], params[1], params[2])
                     elif result == "exists":
-                        text = f"Sorry! Community {params[0]} (+{params[1]}:{self.config.server_name}) " \
+                        text = f"NOTE! Communities support is deprecated and will be removed in Bubo v0.4.0.\n" \
+                               f"\n" \
+                               f"Sorry! Community {params[0]} (+{params[1]}:{self.config.server_name}) " \
                                f"already exists."
                     else:
                         text = f"Error creating community: {error}"
             else:
                 text = "Unknown subcommand!"
         else:
-            text = "I currently maintain the following communities:\n\n"
+            text = "NOTE! Communities support is deprecated and will be removed in Bubo v0.4.0.\n" \
+                   "\n" \
+                   "I currently maintain the following communities:\n\n"
             results = self.store.cursor.execute("""
                 select * from communities
             """)

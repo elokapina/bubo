@@ -61,6 +61,10 @@
 
 * Don't crash in `set_user_power` if bot not in room. 
 
+### Deprecated
+
+* Communities support is deprecated. The `communities` command will be removed in Bubo v0.4.0.
+
 ### Removed
 
 * Removed the `power_to_write` override in the `rooms` database table. Rooms
