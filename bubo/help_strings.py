@@ -35,44 +35,48 @@ Requires bot coordinator privileges. The bot must be in the room
 and with power to invite users.  
 """
 
-HELP_ROOMS = """Maintains rooms.
+HELP_ROOMS_AND_SPACES = """Maintains %%TYPES%%.
 
-When given without parameters, Bubo will tell you about the rooms it maintains.
+When given without parameters, Bubo will tell you about the %%TYPES%% it maintains.
 
 Subcommands:
 
 * `create`
 
-  Create a room using Bubo. Syntax:
+  Create a %%TYPE%% using Bubo. Syntax:
 
-  `rooms create NAME ALIAS TITLE ENCRYPTED(yes/no) PUBLIC(yes/no)`
+  `%%TYPES%% create NAME ALIAS TITLE ENCRYPTED(yes/no) PUBLIC(yes/no)`
     
   Example:
 
-  `rooms create "My awesome room" epic-room "The best room ever!" yes no`
+  `%%TYPES%% create "My awesome room" epic-room "The best room ever!" yes no`
     
   Note, ALIAS should only contain lower case ascii characters and dashes. ENCRYPTED and PUBLIC are either 'yes' or 'no'.
 
 * `list`
 
-  Same as without a subcommand, Bubo will tell you all about the rooms it maintains.
+  Same as without a subcommand, Bubo will tell you all about the %%TYPES%% it maintains.
 
 * `list-no-admin`
 
-  List any rooms Bubo maintains where Bubo lacks admin privileges. 
+  List any %%TYPES%% Bubo maintains where Bubo lacks admin privileges. 
   
 * `recreate`
 
-  Recreate the current room.
+  Recreate the current %%TYPE%%.
   
 * `unlink`
 
-  Remove the room from Bubo's room database. The only parameter is a room ID or alias.
+  Remove the %%TYPE%% from Bubo's %%TYPE%% database. The only parameter is a %%TYPE%% ID or alias.
   
 * `unlink-and-leave`
 
-  Remove the room from Bubo's room database, then leave the room. The only parameter is a room ID or alias.
+  Remove the %%TYPE%% from Bubo's %%TYPE%% database, then leave the %%TYPE%%. The only parameter is a %%TYPE%% ID or 
+  alias.
 """
+
+HELP_ROOMS = HELP_ROOMS_AND_SPACES.replace("%%TYPES%%", "rooms").replace("%%TYPE%%", "room")
+HELP_SPACES = HELP_ROOMS_AND_SPACES.replace("%%TYPES%%", "spaces").replace("%%TYPE%%", "space")
 
 HELP_ROOMS_RECREATE = """Recreates a room.
 

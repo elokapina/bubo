@@ -1,5 +1,12 @@
 # Changelog
 
+## unreleased
+
+### Added
+
+* Add `spaces` command. Mirrors `rooms` command for subcommands and functionality, with the 
+  exception that the created room will be of type Space.
+
 ## v0.3.0 - 2022-01-23
 
 ### Added

@@ -186,6 +186,14 @@ in the room to be recreated.
 
   Remove the room from Bubo's room database, then leave the room. The only parameter is a room ID or alias.
 
+#### `spaces`
+
+Mirrors `rooms` command for subcommands and functionality, with the exception that the created
+room will be of type Space.
+
+Spaces and non-space rooms are tracked separately so listing spaces and rooms produces only 
+the relevant results.
+
 #### `users`
 
 Manage users of an identity provider.

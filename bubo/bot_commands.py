@@ -93,6 +93,8 @@ class Command(object):
             await self._power()
         elif self.command.startswith("rooms"):
             await self._rooms()
+        elif self.command.startswith("spaces"):
+            await self._rooms(space=True)
         elif self.command.startswith("users"):
             await self._users()
         else:
@@ -296,43 +298,45 @@ class Command(object):
         """Show the help text"""
         await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_HELP)
 
-    async def _rooms(self):
-        """List and operate on rooms"""
+    async def _rooms(self, space: bool = False):
+        """List and operate on rooms and spaces"""
         if not await self._ensure_coordinator():
             return
         text = None
+        type_text = 'Space' if space else 'Room'
         if self.args:
             if self.args[0] == "create":
-                # Create a rooms
+                # Create a room or space
                 # Figure out the actual parameters
                 args = self.args[1:]
                 params = csv.reader([' '.join(args)], delimiter=" ")
                 params = [param for param in params][0]
                 if len(params) != 5 or params[3] not in ('yes', 'no') or params[3] not in ('yes', 'no') \
                         or params[0] == "help":
-                    text = f"Wrong number or bad arguments. Usage:\n\n{help_strings.HELP_ROOMS}"
+                    text = f"Wrong number or bad arguments. " \
+                           f"Usage:\n\n{help_strings.HELP_SPACES if space else help_strings.HELP_ROOMS}"
                 else:
                     result, error = await ensure_room_exists(
                         (None, params[0], params[1], None, params[2], None, True if params[3] == "yes" else False,
-                         True if params[4] == "yes" else False, ""),
+                         True if params[4] == "yes" else False, "space" if space else ""),
                         self.client,
                         self.store,
                         self.config,
                     )
                     if result == "created":
-                        text = f"Room {params[0]} (#{params[1]}:{self.config.server_name}) " \
+                        text = f"{type_text} {params[0]} (#{params[1]}:{self.config.server_name}) " \
                                f"created successfully."
                     elif result == "exists":
-                        text = f"Sorry! Room {params[0]} (#{params[1]}:{self.config.server_name}) " \
+                        text = f"Sorry! {type_text} {params[0]} (#{params[1]}:{self.config.server_name}) " \
                                f"already exists."
                     else:
-                        text = f"Error creating room: {error}"
+                        text = f"Error creating {type_text}: {error}"
             elif self.args[0] == "help":
-                text = help_strings.HELP_ROOMS
+                text = help_strings.HELP_SPACES if space else help_strings.HELP_ROOMS
             elif self.args[0] == "list":
-                text = await self._list_rooms()
+                text = await self._list_rooms(spaces=space)
             elif self.args[0] == "list-no-admin":
-                text = await self._list_no_admin_rooms()
+                text = await self._list_no_admin_rooms(spaces=space)
             elif self.args[0] == 'recreate':
                 return await self._recreate_room(subcommand=self.args[1] if len(self.args) > 1 else None)
             elif self.args[0] == 'unlink':
@@ -346,9 +350,9 @@ class Command(object):
         if text:
             await send_text_to_room(self.client, self.room.room_id, text)
 
-    async def _list_no_admin_rooms(self):
-        text = "I lack admin power in the following rooms I maintain:\n\n"
-        rooms = self.store.get_rooms()
+    async def _list_no_admin_rooms(self, spaces: bool = False):
+        text = f"I lack admin power in the following {'spaces' if spaces else 'rooms'} I maintain:\n\n"
+        rooms = self.store.get_rooms(spaces=spaces)
         rooms_list = []
         for room in rooms:
             _state, users = await get_room_power_levels(self.client, room["room_id"])
@@ -360,16 +364,16 @@ class Command(object):
                 suffix = ""
                 admin_users = [user for user, power in users.items() if power == 100]
                 if len(admin_users):
-                    suffix = f". **The room has {len(admin_users)} other admins.**"
+                    suffix = f". **The {'space' if spaces else 'room'} has {len(admin_users)} other admins.**"
                 rooms_list.append(f"* {room['name']} / #{room['alias']}:{self.config.server_name} / "
                                   f"{room['room_id']} / users: {len(user_count) if user_count else 'unknown'}"
                                   f"{suffix}\n")
         text += "".join(rooms_list)
         return text
 
-    async def _list_rooms(self):
-        text = "I currently maintain the following rooms:\n\n"
-        rooms = self.store.get_rooms()
+    async def _list_rooms(self, spaces: bool = False):
+        text = f"I currently maintain the following {'spaces' if spaces else 'rooms'}:\n\n"
+        rooms = self.store.get_rooms(spaces=spaces)
         rooms_list = []
         for room in rooms:
             rooms_list.append(f"* {room['name']} / #{room['alias']}:{self.config.server_name} / {room['room_id']}\n")

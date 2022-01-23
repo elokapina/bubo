@@ -113,10 +113,11 @@ class Storage(object):
         if room:
             return room[0]
 
-    def get_rooms(self) -> List[sqlite3.Row]:
-        results = self.cursor.execute("""
-            select * from rooms
-        """)
+    def get_rooms(self, spaces=False) -> List[sqlite3.Row]:
+        query = "select * from rooms"
+        if spaces:
+            query = f"{query} where type = 'space'"
+        results = self.cursor.execute(query)
         return results.fetchall()
 
     def remove_encrypted_event(self, event_id: str):

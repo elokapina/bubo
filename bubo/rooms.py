@@ -161,6 +161,7 @@ async def ensure_room_exists(
         else:
             logger.info(f"Could not resolve room '{alias}', will try create")
             # Create room
+            space = room_type == "space"
             response = await client.room_create(
                 visibility=RoomVisibility.public if public else RoomVisibility.private,
                 alias=alias,
@@ -168,6 +169,7 @@ async def ensure_room_exists(
                 topic=title,
                 initial_state=state,
                 power_level_override=config.rooms.get("power_levels"),
+                space=space,
             )
             if getattr(response, "room_id", None):
                 room_id = response.room_id
@@ -190,11 +192,11 @@ async def ensure_room_exists(
         else:
             store.cursor.execute("""
                 insert into rooms (
-                    name, alias, room_id, title, encrypted, public
+                    name, alias, room_id, title, encrypted, public, type
                 ) values (
-                    ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?
                 )
-            """, (name, alias, room_id, title, encrypted, public))
+            """, (name, alias, room_id, title, encrypted, public, room_type))
             store.conn.commit()
             logger.info(f"Room '{alias}' creation stored to database")
 
