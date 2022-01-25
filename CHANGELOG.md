@@ -7,6 +7,11 @@
 * Add `spaces` command. Mirrors `rooms` command for subcommands and functionality, with the 
   exception that the created room will be of type Space.
 
+### Fixed
+
+* Force `charset_normalizer` dependency logs to `warning` level to avoid spammy info
+  logs about probing the chaos when the Matrix server is unavailable.
+
 ## v0.3.0 - 2022-01-23
 
 ### Added
