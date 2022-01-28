@@ -106,7 +106,7 @@ class Callbacks(object):
     async def room_key(self, event: RoomKeyEvent):
         """Callback for ToDevice events like room key events."""
         events = self.store.get_encrypted_events(event.session_id)
-        logger.info("Got room key event for session %s, matched sessions: %s" % (event.session_id, len(events)))
+        logger.debug("Got room key event for session %s, matched sessions: %s" % (event.session_id, len(events)))
         if not events:
             return
 
