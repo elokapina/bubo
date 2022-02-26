@@ -12,6 +12,11 @@
 * Force `charset_normalizer` dependency logs to `warning` level to avoid spammy info
   logs about probing the chaos when the Matrix server is unavailable.
 
+* Added an extra member count check to when determining whether to consider a room
+  a one to one direct message, which ignores needing a command prefix. This is to
+  hopefully mitigate race conditions where Bubo is starting up and hasn't yet
+  determined the state of the room.
+
 ## v0.3.0 - 2022-01-23
 
 ### Added

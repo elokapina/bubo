@@ -63,7 +63,7 @@ class Callbacks(object):
 
         # Process as message if in a public room without command prefix
         has_command_prefix = msg.startswith(self.command_prefix)
-        if not has_command_prefix and not room.is_group:
+        if not has_command_prefix and not room.is_group and room.member_count > 2:
             # General message listener
             message = Message(self.client, self.store, self.config, msg, room, event)
             await message.process()
