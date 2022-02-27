@@ -121,6 +121,9 @@ class Config(object):
         if self.email and self.email.get("starttls") and self.email.get("ssl"):
             raise ConfigError("Cannot enable both starttls and ssl for email")
 
+        # Discourse
+        self.discourse = self._get_cfg(["discourse"], default={}, required=False)
+
     def _get_cfg(
             self,
             path: List[str],
@@ -150,3 +153,13 @@ class Config(object):
 
         # We found the option. Return it
         return config
+
+
+def load_config() -> Config:
+    # Read config file
+    # A different config file path can be specified as the first command line argument
+    if len(sys.argv) > 1:
+        config_filepath = sys.argv[1]
+    else:
+        config_filepath = "config.yaml"
+    return Config(config_filepath)

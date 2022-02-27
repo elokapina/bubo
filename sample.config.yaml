@@ -167,3 +167,11 @@ logging:
     enabled: false
     # Room ID
     room: !logs:example.com
+
+# Discourse integration
+discourse:
+  # URL to discourse instance
+  #url: https://discourse.domain.tld
+  # API credentials
+  #api_username: username
+  #api_key: secretkey
