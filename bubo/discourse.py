@@ -17,6 +17,7 @@ class DiscourseClient:
     url: str
 
     async def do_request(self, method, path, data: Dict = None):
+        logger.debug("Making %s request to %s%s", method, self.url, path)
         async with aiohttp.ClientSession() as session:
             async with getattr(session, method.lower())(
                     f"{self.url}{path}",
@@ -90,11 +91,14 @@ class Discourse:
         """
         Get list of groups from Discourse.
         """
-        response = await self.client.do_request(
-            "GET",
-            "/groups.json",
-        )
         self.groups = {}
-        for group in response.get("groups", []):
-            self.groups[group.get("name")] = DiscourseGroup(**group)
+        path = "/groups.json"
+        while True:
+            response = await self.client.do_request("GET", path)
+            for group in response.get("groups", []):
+                self.groups[group.get("name")] = DiscourseGroup(**group)
+            if response.get("total_rows_groups") > len(self.groups.values()):
+                path = f'/groups.json?{response.get("load_more_groups").split("?")[1]}'
+            else:
+                break
         return self.groups
