@@ -99,10 +99,20 @@ class Storage(object):
         """, (room_id,))
         return results.fetchone()
 
-    def get_room(self, room_id: str) -> Optional[str]:
+    def get_room(self, room_id: str) -> Optional[sqlite3.Row]:
         results = self.cursor.execute("""
             select * from rooms where room_id = ?
         """, (room_id,))
+        return results.fetchone()
+
+    def get_room_by_alias(self, alias: str) -> Optional[sqlite3.Row]:
+        if alias.startswith("#"):
+            localpart = alias.split(":")[0].strip("#")
+        else:
+            localpart = alias
+        results = self.cursor.execute("""
+            select id, name, alias, room_id, title, icon, encrypted, public, type from rooms where alias = ?
+        """, (localpart,))
         return results.fetchone()
 
     def get_room_id(self, alias: str) -> Optional[str]:
