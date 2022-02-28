@@ -4,8 +4,12 @@ import logging
 from typing import Dict
 
 import aiohttp
+# noinspection PyPackageRequirements
+from nio import AsyncClient
 
 from bubo.config import Config, load_config
+from bubo.rooms import ensure_room_exists
+from bubo.storage import Storage
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +77,17 @@ class DiscourseGroup:
     title: str = None
     visibility_level: int = None
 
+    @property
+    def short_name(self):
+        """
+        Return the name with leading prefix stripped.
+
+        This assumes group name is in format `prefix-actualname`.
+        """
+        if not self.name.find("-") > -1:
+            return self.name
+        return self.name.split("-", 1)[1]
+
 
 class Discourse:
     client: DiscourseClient
@@ -87,7 +102,7 @@ class Discourse:
             api_key=self.config.discourse.get("api_key"),
         )
 
-    async def get_discourse_groups(self) -> Dict[str, DiscourseGroup]:
+    async def get_groups(self) -> Dict[str, DiscourseGroup]:
         """
         Get list of groups from Discourse.
         """
@@ -101,4 +116,37 @@ class Discourse:
                 path = f'/groups.json?{response.get("load_more_groups").split("?")[1]}'
             else:
                 break
+        logger.info("Found a total of %s groups from Discourse", len(self.groups.keys()))
         return self.groups
+
+    async def sync_groups_as_spaces(self, client: AsyncClient, store: Storage):
+        """
+        Sync groups from Discourse as Matrix spaces.
+
+        # TODO create a separate temporary client
+        # is store safe to recreate given it's sqlite?
+        # possibly only recreate them if not passed in
+        """
+        # TODO ensure parent spaces exist
+
+        groups = await self.get_groups()
+        for name, group in groups.items():
+            logger.info("Ensuring Discourse group %s has a space", name)
+            room_params = (
+                None,
+                group.full_name or group.title or group.short_name,
+                group.name,
+                None,
+                group.title,
+                None,
+                False,
+                False,
+                "space",
+            )
+            try:
+                await ensure_room_exists(room_params, client, store, self.config)
+            except Exception as ex:
+                logger.warning("Failed to ensure group %s exists as a space: %s", name, ex)
+
+            # TODO add space to parent spaces
+            # TODO ensure space rooms
