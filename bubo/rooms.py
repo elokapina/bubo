@@ -151,9 +151,17 @@ async def ensure_room_exists(
         state.append(
             EnableEncryptionBuilder().as_dict(),
         )
-    # Check if room exists
+
+    if not dbid:
+        # Check if we track this room already
+        db_room = store.get_room_by_alias(alias)
+        if db_room:
+            dbid = db_room[0]
+            room_id = db_room[3]
+            logger.info("Room %s found in the database as %s", name, room_id)
+
     if not room_id:
-        logger.info(f"Room '{alias}' ID unknown")
+        # Check if room exists
         response = await client.room_resolve_alias(f"#{alias}:{config.server_name}")
         if getattr(response, "room_id", None):
             room_id = response.room_id
