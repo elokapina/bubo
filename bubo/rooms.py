@@ -143,9 +143,11 @@ async def ensure_room_exists(
     Maintains a room.
     """
     dbid, name, alias, room_id, title, icon, encrypted, public, room_type = room
-    logger.debug(f"Ensuring room: {room}")
+    if room_type not in ("space", "room"):
+        room_type = "room"
+    logger.debug("Ensuring %s: %s", room_type, room)
     room_created = False
-    logger.info(f"Ensuring room {name} ({alias}) exists")
+    logger.info("Ensuring %s %s (%s) exists", room_type, name, alias)
     state = []
     if encrypted:
         state.append(
@@ -158,16 +160,16 @@ async def ensure_room_exists(
         if db_room:
             dbid = db_room[0]
             room_id = db_room[3]
-            logger.info("Room %s found in the database as %s", name, room_id)
+            logger.info("%s %s found in the database as %s", room_type.capitalize(), name, room_id)
 
     if not room_id:
         # Check if room exists
         response = await client.room_resolve_alias(f"#{alias}:{config.server_name}")
         if getattr(response, "room_id", None):
             room_id = response.room_id
-            logger.info(f"Room '{alias}' resolved to {room_id}")
+            logger.info("%s '%s' resolved to %s", room_type.capitalize(), alias, room_id)
         else:
-            logger.info(f"Could not resolve room '{alias}', will try create")
+            logger.info("Could not resolve %s '%s', will try create", room_type, alias)
             # Create room
             space = room_type == "space"
             if not dry_run:
@@ -192,7 +194,7 @@ async def ensure_room_exists(
                         return await ensure_room_exists(room, client, store, config)
                     raise Exception(f"Could not create room: {response.message}, {response.status_code}")
             else:
-                logger.info(f"Not creating room '{alias}' due to dry run")
+                logger.info("Not creating %s '%s' due to dry run", room_type, alias)
         if not dry_run:
             if dbid:
                 # Store room ID
@@ -200,7 +202,7 @@ async def ensure_room_exists(
                     update rooms set room_id = ? where id = ?
                 """, (room_id, dbid))
                 store.conn.commit()
-                logger.info(f"Room '{alias}' room ID stored to database")
+                logger.info("%s '%s' room ID stored to database", room_type.capitalize(), alias)
             else:
                 store.cursor.execute("""
                     insert into rooms (
@@ -210,7 +212,7 @@ async def ensure_room_exists(
                     )
                 """, (name, alias, room_id, title, encrypted, public, room_type))
                 store.conn.commit()
-                logger.info(f"Room '{alias}' creation stored to database")
+                logger.info("%s '%s' creation stored to database", room_type, alias)
 
     if encrypted and not dry_run:
         await ensure_room_encrypted(room_id, client)

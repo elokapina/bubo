@@ -318,7 +318,7 @@ class Command(object):
                 else:
                     result, error = await ensure_room_exists(
                         (None, params[0], params[1], None, params[2], None, True if params[3] == "yes" else False,
-                         True if params[4] == "yes" else False, "space" if space else ""),
+                         True if params[4] == "yes" else False, "space" if space else "room"),
                         self.client,
                         self.store,
                         self.config,
