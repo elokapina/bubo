@@ -122,10 +122,6 @@ class Discourse:
     async def sync_groups_as_spaces(self, client: AsyncClient, store: Storage):
         """
         Sync groups from Discourse as Matrix spaces.
-
-        # TODO create a separate temporary client
-        # is store safe to recreate given it's sqlite?
-        # possibly only recreate them if not passed in
         """
         # TODO ensure parent spaces exist
 
@@ -144,7 +140,7 @@ class Discourse:
                 "space",
             )
             try:
-                await ensure_room_exists(room_params, client, store, self.config)
+                await ensure_room_exists(room_params, client, store, self.config, dry_run=True)
             except Exception as ex:
                 logger.warning("Failed to ensure group %s exists as a space: %s", name, ex)
 

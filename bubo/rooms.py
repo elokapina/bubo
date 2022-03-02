@@ -137,7 +137,7 @@ async def ensure_room_power_levels(
 
 
 async def ensure_room_exists(
-        room: tuple, client: AsyncClient, store: Storage, config: Config,
+        room: tuple, client: AsyncClient, store: Storage, config: Config, dry_run: bool = False,
 ) -> Tuple[str, Optional[str]]:
     """
     Maintains a room.
@@ -170,45 +170,49 @@ async def ensure_room_exists(
             logger.info(f"Could not resolve room '{alias}', will try create")
             # Create room
             space = room_type == "space"
-            response = await client.room_create(
-                visibility=RoomVisibility.public if public else RoomVisibility.private,
-                alias=alias,
-                name=name,
-                topic=title,
-                initial_state=state,
-                power_level_override=config.rooms.get("power_levels"),
-                space=space,
-            )
-            if getattr(response, "room_id", None):
-                room_id = response.room_id
-                logger.info(f"Room '{alias}' created at {room_id}")
-                room_created = True
-            else:
-                if response.status_code == "M_LIMIT_EXCEEDED":
-                    # Wait and try again
-                    logger.info("Hit request limits, waiting 3 seconds...")
-                    time.sleep(3)
-                    return await ensure_room_exists(room, client, store, config)
-                raise Exception(f"Could not create room: {response.message}, {response.status_code}")
-        if dbid:
-            # Store room ID
-            store.cursor.execute("""
-                update rooms set room_id = ? where id = ?
-            """, (room_id, dbid))
-            store.conn.commit()
-            logger.info(f"Room '{alias}' room ID stored to database")
-        else:
-            store.cursor.execute("""
-                insert into rooms (
-                    name, alias, room_id, title, encrypted, public, type
-                ) values (
-                    ?, ?, ?, ?, ?, ?, ?
+            if not dry_run:
+                response = await client.room_create(
+                    visibility=RoomVisibility.public if public else RoomVisibility.private,
+                    alias=alias,
+                    name=name,
+                    topic=title,
+                    initial_state=state,
+                    power_level_override=config.rooms.get("power_levels"),
+                    space=space,
                 )
-            """, (name, alias, room_id, title, encrypted, public, room_type))
-            store.conn.commit()
-            logger.info(f"Room '{alias}' creation stored to database")
+                if getattr(response, "room_id", None):
+                    room_id = response.room_id
+                    logger.info(f"Room '{alias}' created at {room_id}")
+                    room_created = True
+                else:
+                    if response.status_code == "M_LIMIT_EXCEEDED":
+                        # Wait and try again
+                        logger.info("Hit request limits, waiting 3 seconds...")
+                        time.sleep(3)
+                        return await ensure_room_exists(room, client, store, config)
+                    raise Exception(f"Could not create room: {response.message}, {response.status_code}")
+            else:
+                logger.info(f"Not creating room '{alias}' due to dry run")
+        if not dry_run:
+            if dbid:
+                # Store room ID
+                store.cursor.execute("""
+                    update rooms set room_id = ? where id = ?
+                """, (room_id, dbid))
+                store.conn.commit()
+                logger.info(f"Room '{alias}' room ID stored to database")
+            else:
+                store.cursor.execute("""
+                    insert into rooms (
+                        name, alias, room_id, title, encrypted, public, type
+                    ) values (
+                        ?, ?, ?, ?, ?, ?, ?
+                    )
+                """, (name, alias, room_id, title, encrypted, public, room_type))
+                store.conn.commit()
+                logger.info(f"Room '{alias}' creation stored to database")
 
-    if encrypted:
+    if encrypted and not dry_run:
         await ensure_room_encrypted(room_id, client)
 
         # TODO ensure room name + title
@@ -216,10 +220,11 @@ async def ensure_room_exists(
 
     # TODO Add rooms to communities
 
-    room_members = await with_ratelimit(client, "joined_members", room_id)
-    members = getattr(room_members, "members", [])
+    if not dry_run:
+        room_members = await with_ratelimit(client, "joined_members", room_id)
+        members = getattr(room_members, "members", [])
 
-    await ensure_room_power_levels(room_id, client, config, members)
+        await ensure_room_power_levels(room_id, client, config, members)
 
     if room_created:
         return "created", None
