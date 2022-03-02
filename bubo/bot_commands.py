@@ -12,6 +12,7 @@ from nio.schemas import check_user_id
 from bubo import help_strings
 from bubo.chat_functions import send_text_to_room, invite_to_room
 from bubo.communities import ensure_community_exists
+from bubo.discourse import Discourse
 from bubo.rooms import ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels, recreate_room
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
 from bubo.utils import get_users_for_access, with_ratelimit, ensure_room_id
@@ -85,6 +86,8 @@ class Command(object):
             await self._breakout()
         elif self.command.startswith("communities"):
             await self._communities()
+        elif self.command.startswith("discourse"):
+            await self._discourse()
         elif self.command.startswith("help"):
             await self._show_help()
         elif self.command.startswith("invite"):
@@ -191,6 +194,18 @@ class Command(object):
                 communities.append(f"* {community[1]} / +{community[2]}:{self.config.server_name} / {community[3]}\n")
             text += "".join(communities)
         await send_text_to_room(self.client, self.room.room_id, text)
+
+    async def _discourse(self):
+        """Discourse integration"""
+        if not await self._ensure_admin():
+            return
+
+        if not self.args or self.args[0] == "sync":
+            await send_text_to_room(self.client, self.room.room_id, "WIP, try 'sync'")
+            return
+
+        discourse = Discourse()
+        await discourse.sync_groups_as_spaces(self.client, self.store)
 
     async def _invite(self):
         """Handle an invite command"""
