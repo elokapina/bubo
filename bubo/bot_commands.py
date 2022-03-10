@@ -200,7 +200,7 @@ class Command(object):
         if not await self._ensure_admin():
             return
 
-        if not self.args or self.args[0] == "sync":
+        if not self.args or self.args[0] != "sync":
             await send_text_to_room(self.client, self.room.room_id, "WIP, try 'sync'")
             return
 
