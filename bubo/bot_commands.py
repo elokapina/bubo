@@ -331,7 +331,7 @@ class Command(object):
                     text = f"Wrong number or bad arguments. " \
                            f"Usage:\n\n{help_strings.HELP_SPACES if space else help_strings.HELP_ROOMS}"
                 else:
-                    result, error = await ensure_room_exists(
+                    result, room_id = await ensure_room_exists(
                         (None, params[0], params[1], None, params[2], None, True if params[3] == "yes" else False,
                          True if params[4] == "yes" else False, "space" if space else "room"),
                         self.client,
@@ -340,12 +340,12 @@ class Command(object):
                     )
                     if result == "created":
                         text = f"{type_text} {params[0]} (#{params[1]}:{self.config.server_name}) " \
-                               f"created successfully."
+                               f"created successfully. Room ID: {room_id}"
                     elif result == "exists":
                         text = f"Sorry! {type_text} {params[0]} (#{params[1]}:{self.config.server_name}) " \
                                f"already exists."
                     else:
-                        text = f"Error creating {type_text}: {error}"
+                        text = f"Error creating {type_text}"
             elif self.args[0] == "help":
                 text = help_strings.HELP_SPACES if space else help_strings.HELP_ROOMS
             elif self.args[0] == "list":

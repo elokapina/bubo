@@ -18,9 +18,84 @@ from bubo import synapse_admin
 from bubo.chat_functions import invite_to_room, send_text_to_room, send_text_to_room_c2s
 from bubo.config import Config
 from bubo.storage import Storage
-from bubo.utils import with_ratelimit, get_users_for_access
+from bubo.utils import with_ratelimit, get_users_for_access, ensure_room_id
 
 logger = logging.getLogger(__name__)
+
+
+async def add_child_space(
+    parent_space: str, child_space: str, client: AsyncClient, config: Config, suggested: bool = False,
+) -> None:
+    """
+    Add a space as child to another space
+    """
+    parent_id = await ensure_room_id(client, parent_space)
+    child_id = await ensure_room_id(client, child_space)
+    response = await client.room_get_state_event(
+        room_id=parent_id,
+        event_type="m.space.child",
+        state_key=child_id,
+    )
+    if isinstance(response, RoomGetStateEventResponse):
+        content = response.content
+        if content.get('errcode', "") != 'M_NOT_FOUND':
+            if content.get("suggested") == suggested and content.get("via") == [config.server_name]:
+                logger.debug("Child space %s membership in %s looks good already, not adding child space",
+                             (child_space, parent_space))
+                return
+
+    logger.info("Adding child space %s to %s", (child_space, parent_space))
+    order = child_space.split(":")[0].lstrip("#") if child_space.startswith("#") else None
+    content = {
+        "suggested": suggested,
+        "via": [config.server_name],
+    }
+    if order:
+        content["order"] = order
+    response = client.room_put_state(
+        room_id=parent_id,
+        event_type="m.space.child",
+        content=content,
+        state_key=child_id,
+    )
+    if isinstance(response, RoomPutStateError):
+        raise Exception(f"Failed to add child space {child_space} to {parent_space}: {response.message}")
+
+
+async def add_parent_space(
+    parent_space: str, child_space: str, client: AsyncClient, config: Config, canonical: bool = False,
+) -> None:
+    """
+    Add a space as parent to another space
+    """
+    parent_id = await ensure_room_id(client, parent_space)
+    child_id = await ensure_room_id(client, child_space)
+    response = await client.room_get_state_event(
+        room_id=child_id,
+        event_type="m.space.parent",
+        state_key=parent_id,
+    )
+    if isinstance(response, RoomGetStateEventResponse):
+        content = response.content
+        if content.get('errcode', "") != 'M_NOT_FOUND':
+            if content.get("canonical") == canonical and content.get("via") == [config.server_name]:
+                logger.debug("Parent space %s membership in %s looks good already, not adding parent space",
+                             (parent_space, child_space))
+                return
+
+    logger.info("Adding parent space %s to %s", (parent_space, child_space))
+
+    response = client.room_put_state(
+        room_id=child_id,
+        event_type="m.space.parent",
+        content={
+            "canonical": canonical,
+            "via": [config.server_name],
+        },
+        state_key=parent_id,
+    )
+    if isinstance(response, RoomPutStateError):
+        raise Exception(f"Failed to add parent space {parent_space} to {child_space}: {response.message}")
 
 
 async def create_breakout_room(
@@ -138,9 +213,13 @@ async def ensure_room_power_levels(
 
 async def ensure_room_exists(
         room: tuple, client: AsyncClient, store: Storage, config: Config, dry_run: bool = False,
-) -> Tuple[str, Optional[str]]:
+) -> Tuple[str, str]:
     """
     Maintains a room.
+
+    Returns a tuple of:
+      - created/exists string
+      - room_id
     """
     dbid, name, alias, room_id, title, icon, encrypted, public, room_type = room
     if room_type not in ("space", "room"):
@@ -229,8 +308,8 @@ async def ensure_room_exists(
         await ensure_room_power_levels(room_id, client, config, members)
 
     if room_created:
-        return "created", None
-    return "exists", None
+        return "created", room_id
+    return "exists", room_id
 
 
 async def get_room_power_levels(

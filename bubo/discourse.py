@@ -8,7 +8,7 @@ import aiohttp
 from nio import AsyncClient
 
 from bubo.config import Config, load_config
-from bubo.rooms import ensure_room_exists
+from bubo.rooms import ensure_room_exists, add_child_space, add_parent_space
 from bubo.storage import Storage
 
 logger = logging.getLogger(__name__)
@@ -123,8 +123,6 @@ class Discourse:
         """
         Sync groups from Discourse as Matrix spaces.
         """
-        # TODO ensure parent spaces exist
-
         groups = await self.get_groups()
         for name, group in groups.items():
             logger.info("Ensuring Discourse group %s has a space", name)
@@ -140,9 +138,32 @@ class Discourse:
                 "space",
             )
             try:
-                await ensure_room_exists(room_params, client, store, self.config, dry_run=True)
+                _result, room_id = await ensure_room_exists(room_params, client, store, self.config, dry_run=True)
             except Exception as ex:
                 logger.warning("Failed to ensure group %s exists as a space: %s", name, ex)
+                continue
 
-            # TODO add space to parent spaces
+            # Add to parent spaces based on prefixes
+            parts = group.name.split('-')
+            if len(parts) > 1:
+                prefix = parts[0]
+                prefixes = self.config.discourse.get("spaces", {}).get("prefixes", {})
+                if prefix in prefixes.keys():
+                    # Ensure we're a subspace of this parent space
+                    parent_space = prefixes[prefix]
+                    await add_child_space(
+                        parent_space=parent_space,
+                        child_space=room_id,
+                        client=client,
+                        config=self.config,
+                        # TODO add suggested bool, prefix in config?
+                    )
+                    await add_parent_space(
+                        parent_space=parent_space,
+                        child_space=room_id,
+                        client=client,
+                        config=self.config,
+                        canonical=True
+                    )
+
             # TODO ensure space rooms

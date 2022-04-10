@@ -175,3 +175,11 @@ discourse:
   # API credentials
   #api_username: username
   #api_key: secretkey
+
+  spaces:
+    # Spaces to add Discourse group spaces into based on their prefix
+    # '-' as the delimiter to find the prefix.
+    # For example 'abc-foobar' would be added to the space with the 'abc' key.
+    prefixes:
+      #abc: "#space-abc:domain.tld"
+
