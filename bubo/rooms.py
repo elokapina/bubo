@@ -23,14 +23,14 @@ from bubo.utils import with_ratelimit, get_users_for_access, ensure_room_id
 logger = logging.getLogger(__name__)
 
 
-async def add_child_space(
-    parent_space: str, child_space: str, client: AsyncClient, config: Config, suggested: bool = False,
+async def add_membership_in_space(
+    parent_space: str, child: str, client: AsyncClient, config: Config, suggested: bool = False,
 ) -> None:
     """
-    Add a space as child to another space
+    Add a space or room as child to a space
     """
     parent_id = await ensure_room_id(client, parent_space)
-    child_id = await ensure_room_id(client, child_space)
+    child_id = await ensure_room_id(client, child)
     response = await client.room_get_state_event(
         room_id=parent_id,
         event_type="m.space.child",
@@ -40,12 +40,12 @@ async def add_child_space(
         content = response.content
         if content.get('errcode', "") != 'M_NOT_FOUND':
             if content.get("suggested") == suggested and content.get("via") == [config.server_name]:
-                logger.debug("Child space %s membership in %s looks good already, not adding child space",
-                             (child_space, parent_space))
+                logger.debug("Child %s membership in %s looks good already, not adding membership",
+                             child, parent_space)
                 return
 
-    logger.info("Adding child space %s to %s", (child_space, parent_space))
-    order = child_space.split(":")[0].lstrip("#") if child_space.startswith("#") else None
+    logger.info("Adding child %s to %s", child, parent_space)
+    order = child.split(":")[0].lstrip("#") if child.startswith("#") else None
     content = {
         "suggested": suggested,
         "via": [config.server_name],
@@ -59,17 +59,17 @@ async def add_child_space(
         state_key=child_id,
     )
     if isinstance(response, RoomPutStateError):
-        raise Exception(f"Failed to add child space {child_space} to {parent_space}: {response.message}")
+        raise Exception(f"Failed to add child {child} to {parent_space}: {response.message}")
 
 
 async def add_parent_space(
-    parent_space: str, child_space: str, client: AsyncClient, config: Config, canonical: bool = False,
+    parent_space: str, child: str, client: AsyncClient, config: Config, canonical: bool = False,
 ) -> None:
     """
-    Add a space as parent to another space
+    Add a space as parent to space or room
     """
     parent_id = await ensure_room_id(client, parent_space)
-    child_id = await ensure_room_id(client, child_space)
+    child_id = await ensure_room_id(client, child)
     response = await client.room_get_state_event(
         room_id=child_id,
         event_type="m.space.parent",
@@ -80,10 +80,10 @@ async def add_parent_space(
         if content.get('errcode', "") != 'M_NOT_FOUND':
             if content.get("canonical") == canonical and content.get("via") == [config.server_name]:
                 logger.debug("Parent space %s membership in %s looks good already, not adding parent space",
-                             (parent_space, child_space))
+                             parent_space, child)
                 return
 
-    logger.info("Adding parent space %s to %s", (parent_space, child_space))
+    logger.info("Adding parent space %s to %s", parent_space, child)
 
     response = client.room_put_state(
         room_id=child_id,
@@ -95,7 +95,7 @@ async def add_parent_space(
         state_key=parent_id,
     )
     if isinstance(response, RoomPutStateError):
-        raise Exception(f"Failed to add parent space {parent_space} to {child_space}: {response.message}")
+        raise Exception(f"Failed to add parent space {parent_space} to {child}: {response.message}")
 
 
 async def create_breakout_room(

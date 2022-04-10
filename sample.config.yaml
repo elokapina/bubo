@@ -183,3 +183,29 @@ discourse:
     prefixes:
       #abc: "#space-abc:domain.tld"
 
+    # Rooms to create
+    # For templates, the following variables are available:
+    # - Group display name: %groupdisplayname%
+    # - Group name: %groupname%
+    # - Group title: %grouptitle%
+    # - Group shortname (name with any prefix stripped): %groupshortname%
+    rooms:
+      - templates:
+          alias: "%groupshortname%"
+          name: "%groupdisplayname% - Living room"
+          title: "%grouptitle%"
+        joinable_via_parent: true
+        encrypted: true
+        public: false
+        suggested: true
+      - templates:
+          alias: "%groupshortname%-announcements"
+          name: "%groupdisplayname% - Announcements"
+          title: "%grouptitle%"
+        joinable_via_parent: true
+        encrypted: true
+        public: false
+        suggested: true
+
+
+

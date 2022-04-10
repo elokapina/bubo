@@ -8,7 +8,7 @@ import aiohttp
 from nio import AsyncClient
 
 from bubo.config import Config, load_config
-from bubo.rooms import ensure_room_exists, add_child_space, add_parent_space
+from bubo.rooms import ensure_room_exists, add_membership_in_space, add_parent_space
 from bubo.storage import Storage
 
 logger = logging.getLogger(__name__)
@@ -126,9 +126,10 @@ class Discourse:
         groups = await self.get_groups()
         for name, group in groups.items():
             logger.info("Ensuring Discourse group %s has a space", name)
+            group_display_name = group.full_name or group.title or group.short_name
             room_params = (
                 None,
-                group.full_name or group.title or group.short_name,
+                group_display_name,
                 group.name,
                 None,
                 group.title,
@@ -138,32 +139,76 @@ class Discourse:
                 "space",
             )
             try:
-                _result, room_id = await ensure_room_exists(room_params, client, store, self.config, dry_run=True)
+                _result, space_id = await ensure_room_exists(room_params, client, store, self.config, dry_run=True)
             except Exception as ex:
                 logger.warning("Failed to ensure group %s exists as a space: %s", name, ex)
                 continue
+
+            spaces_config = self.config.discourse.get("spaces", {})
 
             # Add to parent spaces based on prefixes
             parts = group.name.split('-')
             if len(parts) > 1:
                 prefix = parts[0]
-                prefixes = self.config.discourse.get("spaces", {}).get("prefixes", {})
+                prefixes = spaces_config.get("prefixes", {})
                 if prefix in prefixes.keys():
                     # Ensure we're a subspace of this parent space
                     parent_space = prefixes[prefix]
-                    await add_child_space(
+                    await add_membership_in_space(
                         parent_space=parent_space,
-                        child_space=room_id,
+                        child=space_id,
                         client=client,
                         config=self.config,
-                        # TODO add suggested bool, prefix in config?
                     )
                     await add_parent_space(
                         parent_space=parent_space,
-                        child_space=room_id,
+                        child=space_id,
                         client=client,
                         config=self.config,
                         canonical=True
                     )
 
-            # TODO ensure space rooms
+            def template_compile(template_str: str) -> str:
+                result = template_str.replace("%groupdisplayname%", group_display_name)
+                result = result.replace("%groupname%", group.name)
+                result = result.replace("%grouptitle%", group.title or "")
+                result = result.replace("%groupshortname%", group.short_name)
+                return result
+
+            # Handle space rooms
+            for room in spaces_config.get("rooms", []):
+                room_params = (
+                    None,
+                    template_compile(room.get("templates").get("name")),
+                    template_compile(room.get("templates").get("alias")),
+                    None,
+                    template_compile(room.get("templates").get("title")),
+                    None,
+                    room.get("encrypted"),
+                    room.get("public"),
+                    "room",
+                )
+                try:
+                    _result, room_id = await ensure_room_exists(room_params, client, store, self.config, dry_run=True)
+                except Exception as ex:
+                    logger.warning(
+                        "Failed to ensure group %s room %s exists: %s",
+                        group.name, room.get("templates").get("name"), ex,
+                    )
+                    continue
+
+                # Maintain memberships
+                await add_membership_in_space(
+                    parent_space=space_id,
+                    child=room_id,
+                    client=client,
+                    config=self.config,
+                    suggested=room.get("suggested"),
+                )
+                await add_parent_space(
+                    parent_space=space_id,
+                    child=room_id,
+                    client=client,
+                    config=self.config,
+                    canonical=True
+                )
