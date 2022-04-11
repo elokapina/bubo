@@ -104,6 +104,25 @@ HELP_ROOMS_UNLINK = """Give the room ID or alias to unlink as the first paramete
 To also make Bubo leave the room, use the `unlink-and-leave` command variant.
 """
 
+HELP_ROOMS_LINK = """Store an existing room in Bubo's database. 
+Give the room ID or alias to link as the first parameter. For example:
+
+`link #myroom:domain.tld`
+
+Bubo will try to join the room, using the admin API if normal join fails.
+"""
+
+HELP_ROOMS_LINK_AND_ADMIN = """Store an existing room in Bubo's database. 
+Also try to make Bubo an admin of the room, if Bubo is server admin.  
+Give the room ID or alias to link as the first parameter. For example:
+
+`link-and-admin #myroom:domain.tld`
+
+Bubo will try to join the room, using the admin API if normal join fails.
+If necessary, it will use the admin API to make an admin of the room make
+itself admin.
+"""
+
 HELP_USERS = """List or manage users.
 
 Without any subcommands, lists users. Other subcommands:

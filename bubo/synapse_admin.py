@@ -81,3 +81,24 @@ async def join_users(config: Config, users: List[str], room_id_or_alias: str) ->
             if result:
                 total_joined += 1
         return total_joined
+
+
+async def make_room_admin(config: Config, room_id: str, user_id: str) -> bool:
+    headers = get_request_headers(config)
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+                f"{config.homeserver_url}{API_PREFIX_V1}/rooms/{room_id}/make_room_admin",
+                json={
+                    "user_id": user_id,
+                },
+                headers=headers,
+        ) as response:
+            if response.status == 429:
+                await asyncio.sleep(1)
+                return await make_room_admin(config, room_id, user_id)
+            try:
+                response.raise_for_status()
+                return True
+            except Exception as ex:
+                logger.warning("Failed to make room admin in %s for %s: %s", room_id, user_id, ex)
+                return False

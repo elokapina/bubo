@@ -7,6 +7,11 @@
 * Add `spaces` command. Mirrors `rooms` command for subcommands and functionality, with the 
   exception that the created room will be of type Space.
 
+* Added rooms `link` and `link-and-admin` subcommands. Both variants make Bubo attempt
+  to join the room and store the room in the database to start tracking it. If Bubo
+  is Synapse admin and/or admin permissions is requested, it will also try to join and/or
+  make itself admin using the Synapse admin API.
+
 ### Fixed
 
 * Force `charset_normalizer` dependency logs to `warning` level to avoid spammy info

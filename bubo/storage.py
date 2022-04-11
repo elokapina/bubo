@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class Storage(object):
     def __init__(self, db_path):
-        """Setup the database
+        """Set up the database
 
         Runs an initial setup or migrations depending on whether a database file has already
         been created
@@ -184,6 +184,16 @@ class Storage(object):
                 (requester, room_id, timestamp) values 
                 (?, ?, ?);
         """, (requester, room_id, timestamp))
+        self.conn.commit()
+
+    def store_room(self, name, alias, room_id, title, encrypted, public, room_type):
+        self.cursor.execute("""
+            insert into rooms (
+                name, alias, room_id, title, encrypted, public, type
+            ) values (
+                ?, ?, ?, ?, ?, ?, ?
+            )
+        """, (name, alias, room_id, title, encrypted, public, room_type))
         self.conn.commit()
 
     def unlink_room(self, room_id: str):

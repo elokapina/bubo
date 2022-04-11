@@ -148,6 +148,14 @@ Example:
 Note, ALIAS should only contain lower case ascii characters and dashes. 
 ENCRYPTED and PUBLIC are either 'yes' or 'no'.
 
+* `link` and `link-and-admin`
+
+Both variants make Bubo attempt to join the room and store the room in the database to 
+start tracking it. If Bubo is Synapse admin and/or admin permissions is requested, 
+it will also try to join and/or make itself admin using the Synapse admin API.
+
+The only parameter is a room ID or alias.
+
 * `list`
 
 Same as without a subcommand, Bubo will tell you all about the rooms it maintains.

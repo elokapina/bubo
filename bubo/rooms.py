@@ -283,14 +283,7 @@ async def ensure_room_exists(
                 store.conn.commit()
                 logger.info("%s '%s' room ID stored to database", room_type.capitalize(), alias)
             else:
-                store.cursor.execute("""
-                    insert into rooms (
-                        name, alias, room_id, title, encrypted, public, type
-                    ) values (
-                        ?, ?, ?, ?, ?, ?, ?
-                    )
-                """, (name, alias, room_id, title, encrypted, public, room_type))
-                store.conn.commit()
+                store.store_room(name, alias, room_id, title, encrypted, public, room_type)
                 logger.info("%s '%s' creation stored to database", room_type, alias)
 
     if encrypted and not dry_run:

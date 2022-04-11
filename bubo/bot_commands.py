@@ -5,7 +5,10 @@ import time
 
 from email_validator import validate_email, EmailNotValidError
 # noinspection PyPackageRequirements
-from nio import RoomPutStateError, RoomGetStateEventError, RoomPutStateResponse, ProtocolError
+from nio import (
+    RoomPutStateError, RoomGetStateEventError, RoomPutStateResponse, ProtocolError, JoinedRoomsError,
+    JoinError, RoomGetStateEventResponse,
+)
 # noinspection PyPackageRequirements
 from nio.schemas import check_user_id
 
@@ -14,6 +17,7 @@ from bubo.chat_functions import send_text_to_room, invite_to_room
 from bubo.communities import ensure_community_exists
 from bubo.discourse import Discourse
 from bubo.rooms import ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels, recreate_room
+from bubo.synapse_admin import make_room_admin
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
 from bubo.utils import get_users_for_access, with_ratelimit, ensure_room_id
 
@@ -208,7 +212,7 @@ class Command(object):
         await discourse.sync_groups_as_spaces(self.client, self.store)
 
     async def _invite(self):
-        """Handle an invite command"""
+        """Handle an invitation command"""
         if not await self._ensure_coordinator():
             return
         if not self.args or self.args[0] == "help":
@@ -348,6 +352,10 @@ class Command(object):
                         text = f"Error creating {type_text}"
             elif self.args[0] == "help":
                 text = help_strings.HELP_SPACES if space else help_strings.HELP_ROOMS
+            elif self.args[0] == "link":
+                await self._link_room(make_admin=False)
+            elif self.args[0] == "link-and-admin":
+                await self._link_room(make_admin=True)
             elif self.args[0] == "list":
                 text = await self._list_rooms(spaces=space)
             elif self.args[0] == "list-no-admin":
@@ -364,6 +372,133 @@ class Command(object):
             text = await self._list_rooms()
         if text:
             await send_text_to_room(self.client, self.room.room_id, text)
+
+    async def _link_room(self, make_admin=False):
+        """
+        Link the room by adding to the Bubo room database.
+
+        Will try to join the room if not a member.
+
+        If "make_admin" is true and Bubo is synapse admin, it will make itself
+        admin using the admin API, which will also act as fallback to join the room
+        when lacking an invitation.
+        """
+        if not await self._ensure_coordinator():
+            return
+
+        if len(self.args) < 2:
+            if make_admin:
+                return await send_text_to_room(
+                    self.client, self.room.room_id, help_strings.HELP_ROOMS_LINK_AND_ADMIN,
+                )
+            else:
+                return await send_text_to_room(
+                    self.client, self.room.room_id, help_strings.HELP_ROOMS_LINK,
+                )
+        try:
+            room_id = await ensure_room_id(self.client, self.args[1])
+        except (KeyError, ProtocolError):
+            return await send_text_to_room(
+                self.client, self.room.room_id, f"Error resolving room ID",
+            )
+
+        room = self.store.get_room(room_id)
+        if room:
+            return await send_text_to_room(
+                self.client, self.room.room_id, f"Room {room_id} is already tracked by Bubo.",
+            )
+
+        # Ensure member
+        response = await self.client.joined_rooms()
+        if isinstance(response, JoinedRoomsError):
+            return await send_text_to_room(
+                self.client, self.room.room_id, f"Error fetching current joined rooms. Try again?",
+            )
+        if room_id not in response.rooms:
+            # Try join
+            response = await self.client.join(room_id)
+            if isinstance(response, JoinError):
+                # Try the admin API if admin
+                if self.config.is_synapse_admin:
+                    response = await make_room_admin(config=self.config, room_id=room_id, user_id=self.config.user_id)
+                    if not response:
+                        return await send_text_to_room(
+                            self.client, self.room.room_id,
+                            f"Failed to get access to the room. You'll need someone to invite Bubo manually.",
+                        )
+                else:
+                    return await send_text_to_room(
+                        self.client, self.room.room_id,
+                        f"Failed to join the room. You'll need someone to invite Bubo manually.",
+                    )
+        else:
+            if make_admin and self.config.is_synapse_admin:
+                # Are we admin?
+                _state, users = get_room_power_levels(self.client, room_id)
+                if users and users.get(self.config.user_id, 0) < 100:
+                    response = await make_room_admin(config=self.config, room_id=room_id, user_id=self.config.user_id)
+                    if not response:
+                        await send_text_to_room(
+                            self.client, self.room.room_id,
+                            f"Failed to make Bubo admin in the room. Continuing with linking anyway.",
+                        )
+
+        # Get some data
+        # We can't trust the room is in the matrix-nio store at this stage yet
+        name = ""
+        response = await self.client.room_get_state_event(room_id=room_id, event_type="m.room.name")
+        if isinstance(response, RoomGetStateEventResponse):
+            name = response.content.get("name")
+        alias = ""
+        response = await self.client.room_get_state_event(room_id=room_id, event_type="m.room.canonical_alias")
+        if isinstance(response, RoomGetStateEventResponse):
+            alias = response.content.get("alias")
+            if alias:
+                alias = alias.lstrip("#").split(":")[0]
+        title = ""
+        response = await self.client.room_get_state_event(room_id=room_id, event_type="m.room.topic")
+        if isinstance(response, RoomGetStateEventResponse):
+            title = response.content.get("title")
+        encrypted = False
+        response = await self.client.room_get_state_event(room_id=room_id, event_type="m.room.encryption")
+        if isinstance(response, RoomGetStateEventResponse):
+            encrypted = True
+        public = False
+        response = await self.client.room_get_state_event(room_id=room_id, event_type="m.room.join_rules")
+        if isinstance(response, RoomGetStateEventResponse):
+            public = response.content.get("join_rule") == "public"
+        room_type = "room"
+        response = await self.client.room_get_state_event(room_id=room_id, event_type="m.room.create")
+        if isinstance(response, RoomGetStateEventResponse):
+            room_type = "space" if response.content.get("type") == "m.space" else "room"
+
+        if not name or not alias:
+            # Currently required :(
+            if not name:
+                await send_text_to_room(
+                    self.client, self.room.room_id,
+                    f"Failed to link room, it's missing a name. Add a name and try again.",
+                )
+            if not alias:
+                await send_text_to_room(
+                    self.client, self.room.room_id,
+                    f"Failed to link room, it's missing an alias. Add an alias and try again.",
+                )
+            return
+
+        self.store.store_room(
+            name=name,
+            alias=alias,
+            room_id=room_id,
+            title=title,
+            encrypted=encrypted,
+            public=public,
+            room_type=room_type,
+        )
+
+        return await send_text_to_room(
+            self.client, self.room.room_id, f"Room {room_id} has been added to the Bubo database.",
+        )
 
     async def _list_no_admin_rooms(self, spaces: bool = False):
         text = f"I lack admin power in the following {'spaces' if spaces else 'rooms'} I maintain:\n\n"
