@@ -133,6 +133,7 @@ class Discourse:
         for name, group in groups.items():
             if whitelist and name not in whitelist:
                 logger.debug("Skipping group %s as it's not in the whitelist")
+                continue
 
             logger.info("Ensuring Discourse group %s has a space", name)
             group_display_name = group.full_name or group.title or group.short_name
