@@ -123,8 +123,17 @@ class Discourse:
         """
         Sync groups from Discourse as Matrix spaces.
         """
+        dry_run = self.config.discourse.get("dry_run")
+        whitelist = self.config.discourse.get("whitelist")
+        logger.info(
+            "Starting Discourse groups sync to Spaces, dry_run is %s, whitelist is %s items",
+            dry_run, len(whitelist),
+        )
         groups = await self.get_groups()
         for name, group in groups.items():
+            if whitelist and name not in whitelist:
+                logger.debug("Skipping group %s as it's not in the whitelist")
+
             logger.info("Ensuring Discourse group %s has a space", name)
             group_display_name = group.full_name or group.title or group.short_name
             room_params = (
@@ -139,7 +148,7 @@ class Discourse:
                 "space",
             )
             try:
-                _result, space_id = await ensure_room_exists(room_params, client, store, self.config, dry_run=True)
+                _result, space_id = await ensure_room_exists(room_params, client, store, self.config, dry_run=dry_run)
             except Exception as ex:
                 logger.warning("Failed to ensure group %s exists as a space: %s", name, ex)
                 continue
@@ -154,19 +163,20 @@ class Discourse:
                 if prefix in prefixes.keys():
                     # Ensure we're a subspace of this parent space
                     parent_space = prefixes[prefix]
-                    await add_membership_in_space(
-                        parent_space=parent_space,
-                        child=space_id,
-                        client=client,
-                        config=self.config,
-                    )
-                    await add_parent_space(
-                        parent_space=parent_space,
-                        child=space_id,
-                        client=client,
-                        config=self.config,
-                        canonical=True
-                    )
+                    if not dry_run:
+                        await add_membership_in_space(
+                            parent_space=parent_space,
+                            child=space_id,
+                            client=client,
+                            config=self.config,
+                        )
+                        await add_parent_space(
+                            parent_space=parent_space,
+                            child=space_id,
+                            client=client,
+                            config=self.config,
+                            canonical=True
+                        )
 
             def template_compile(template_str: str) -> str:
                 result = template_str.replace("%groupdisplayname%", group_display_name)
@@ -189,7 +199,9 @@ class Discourse:
                     "room",
                 )
                 try:
-                    _result, room_id = await ensure_room_exists(room_params, client, store, self.config, dry_run=True)
+                    _result, room_id = await ensure_room_exists(
+                        room_params, client, store, self.config, dry_run=dry_run,
+                    )
                 except Exception as ex:
                     logger.warning(
                         "Failed to ensure group %s room %s exists: %s",
@@ -198,17 +210,18 @@ class Discourse:
                     continue
 
                 # Maintain memberships
-                await add_membership_in_space(
-                    parent_space=space_id,
-                    child=room_id,
-                    client=client,
-                    config=self.config,
-                    suggested=room.get("suggested"),
-                )
-                await add_parent_space(
-                    parent_space=space_id,
-                    child=room_id,
-                    client=client,
-                    config=self.config,
-                    canonical=True
-                )
+                if not dry_run:
+                    await add_membership_in_space(
+                        parent_space=space_id,
+                        child=room_id,
+                        client=client,
+                        config=self.config,
+                        suggested=room.get("suggested"),
+                    )
+                    await add_parent_space(
+                        parent_space=space_id,
+                        child=room_id,
+                        client=client,
+                        config=self.config,
+                        canonical=True
+                    )

@@ -207,5 +207,9 @@ discourse:
         public: false
         suggested: true
 
+    # If set, only these groups will be synced to spaces
+    # Use the Discourse group name for list items.
+    whitelist: []
 
-
+    # Set to true to dry-run spaces sync - no spaces or rooms will be actually created
+    dry_run: False
