@@ -123,8 +123,9 @@ class Discourse:
         """
         Sync groups from Discourse as Matrix spaces.
         """
-        dry_run = self.config.discourse.get("dry_run")
-        whitelist = self.config.discourse.get("whitelist")
+        spaces_config = self.config.discourse.get("spaces", {})
+        dry_run = spaces_config.get("dry_run", False)
+        whitelist = spaces_config.get("whitelist", [])
         logger.info(
             "Starting Discourse groups sync to Spaces, dry_run is %s, whitelist is %s items",
             dry_run, len(whitelist),
@@ -153,8 +154,6 @@ class Discourse:
             except Exception as ex:
                 logger.warning("Failed to ensure group %s exists as a space: %s", name, ex)
                 continue
-
-            spaces_config = self.config.discourse.get("spaces", {})
 
             # Add to parent spaces based on prefixes
             parts = group.name.split('-')
