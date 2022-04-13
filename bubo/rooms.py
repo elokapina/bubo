@@ -52,7 +52,7 @@ async def add_membership_in_space(
     }
     if order:
         content["order"] = order
-    response = client.room_put_state(
+    response = await client.room_put_state(
         room_id=parent_id,
         event_type="m.space.child",
         content=content,
@@ -85,7 +85,7 @@ async def add_parent_space(
 
     logger.info("Adding parent space %s to %s", parent_space, child)
 
-    response = client.room_put_state(
+    response = await client.room_put_state(
         room_id=child_id,
         event_type="m.space.parent",
         content={
@@ -571,6 +571,43 @@ async def recreate_room(
             )
         except Exception as ex:
             logger.error(f"Failed to inform of error to the room to be recreated: {ex}")
+
+
+async def set_join_rules(
+    room_alias_or_id: str, join_rule: str, client: AsyncClient, allow: Dict = None,
+) -> None:
+    """
+    Set a join rule for a room or space.
+
+    Optionally give allow conditions.
+    """
+    room_id = await ensure_room_id(client, room_alias_or_id)
+    response = await client.room_get_state_event(
+        room_id=room_id,
+        event_type="m.room.join_rules",
+    )
+    if isinstance(response, RoomGetStateEventResponse):
+        content = response.content
+        if content.get('errcode', "") != 'M_NOT_FOUND':
+            if content.get("join_rule") == join_rule and content.get("allow", None) == allow:
+                logger.debug("Join rule looks good for %s, not modifying", room_id)
+                return
+
+    logger.info("Setting join rule of %s to %s with allow %s", room_id, join_rule, allow)
+
+    content = {
+        "join_rule": join_rule,
+    }
+    if allow:
+        content["allow"] = allow
+
+    response = await client.room_put_state(
+        room_id=room_id,
+        event_type="m.room.join_rules",
+        content=content,
+    )
+    if isinstance(response, RoomPutStateError):
+        raise Exception(f"Failed to set join rules of {room_id}: {response.message}")
 
 
 async def set_room_directory_status(

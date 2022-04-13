@@ -8,7 +8,9 @@ import aiohttp
 from nio import AsyncClient
 
 from bubo.config import Config, load_config
-from bubo.rooms import ensure_room_exists, add_membership_in_space, add_parent_space
+from bubo.rooms import (
+    ensure_room_exists, add_membership_in_space, add_parent_space, set_join_rules,
+)
 from bubo.storage import Storage
 
 logger = logging.getLogger(__name__)
@@ -225,3 +227,16 @@ class Discourse:
                         config=self.config,
                         canonical=True
                     )
+                    if room.get("joinable_via_parent", False):
+                        # TODO ensure room version compat
+                        # TODO we may want to also fail if room is public currently
+                        # Set join rules
+                        await set_join_rules(
+                            room_alias_or_id=room_id,
+                            join_rule="restricted",
+                            client=client,
+                            allow={
+                                "room_id": space_id,
+                                "type": "m.room_membership",
+                            }
+                        )
