@@ -6,6 +6,8 @@ from typing import Dict
 import aiohttp
 # noinspection PyPackageRequirements
 from nio import AsyncClient
+# noinspection PyPackageRequirements
+from slugify import slugify
 
 from bubo.config import Config, load_config
 from bubo.rooms import (
@@ -80,6 +82,20 @@ class DiscourseGroup:
     visibility_level: int = None
 
     @property
+    def alias(self) -> str:
+        """
+        Conforms to using as an alias in Matrix.
+        """
+        return slugify(self.name)
+
+    @property
+    def short_alias(self) -> str:
+        """
+        Conforms to using as an alias in Matrix.
+        """
+        return slugify(self.short_name)
+
+    @property
     def short_name(self):
         """
         Return the name with leading prefix stripped.
@@ -143,7 +159,7 @@ class Discourse:
             room_params = (
                 None,
                 group_display_name,
-                group.name,
+                group.alias,
                 None,
                 group.title,
                 None,
@@ -184,7 +200,7 @@ class Discourse:
                 result = template_str.replace("%groupdisplayname%", group_display_name)
                 result = result.replace("%groupname%", group.name)
                 result = result.replace("%grouptitle%", group.title or "")
-                result = result.replace("%groupshortname%", group.short_name)
+                result = result.replace("%groupshortname%", group.short_alias)
                 return result
 
             # Handle space rooms
