@@ -16,7 +16,10 @@ from bubo import help_strings
 from bubo.chat_functions import send_text_to_room, invite_to_room
 from bubo.communities import ensure_community_exists
 from bubo.discourse import Discourse
-from bubo.rooms import ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels, recreate_room
+from bubo.rooms import (
+    ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels, recreate_room,
+    add_alias, remove_alias, set_canonical_alias,
+)
 from bubo.synapse_admin import make_room_admin
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
 from bubo.utils import get_users_for_access, with_ratelimit, ensure_room_id
@@ -106,6 +109,70 @@ class Command(object):
             await self._users()
         else:
             await self._unknown_command()
+
+    async def _alias(self):
+        """
+        Maintain room aliases.
+        """
+        if len(self.args) < 4:
+            await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_ROOMS_ALIAS)
+            return
+
+        room_alias_or_id = self.args[1]
+        subcommand = self.args[2]
+        alias = self.args[3]
+
+        if subcommand == "add":
+            try:
+                await add_alias(room_alias_or_id=room_alias_or_id, alias=alias, client=self.client)
+            except Exception as ex:
+                await send_text_to_room(
+                    self.client,
+                    self.room.room_id,
+                    f"Failed to add alias to room {room_alias_or_id}: {ex}"
+                )
+            else:
+                await send_text_to_room(
+                    self.client,
+                    self.room.room_id,
+                    f"Alias {alias} added to {room_alias_or_id}"
+                )
+            return
+        elif subcommand == "remove":
+            try:
+                await remove_alias(room_alias_or_id=room_alias_or_id, alias=alias, client=self.client)
+            except Exception as ex:
+                await send_text_to_room(
+                    self.client,
+                    self.room.room_id,
+                    f"Failed to remove alias from room {room_alias_or_id}: {ex}"
+                )
+            else:
+                await send_text_to_room(
+                    self.client,
+                    self.room.room_id,
+                    f"Alias {alias} removed from {room_alias_or_id}"
+                )
+            return
+        elif subcommand == "main":
+            try:
+                await set_canonical_alias(
+                    room_alias_or_id=room_alias_or_id, alias=alias, client=self.client, store=self.store,
+                    config=self.config,
+                )
+            except Exception as ex:
+                await send_text_to_room(
+                    self.client,
+                    self.room.room_id,
+                    f"Failed to set main alias for room {room_alias_or_id}: {ex}"
+                )
+            else:
+                await send_text_to_room(
+                    self.client,
+                    self.room.room_id,
+                    f"Alias {alias} set as main alias for {room_alias_or_id}"
+                )
+            return
 
     async def _breakout(self):
         """Create a breakout room"""
@@ -324,7 +391,9 @@ class Command(object):
         text = None
         type_text = 'Space' if space else 'Room'
         if self.args:
-            if self.args[0] == "create":
+            if self.args[0] == "alias":
+                await self._alias()
+            elif self.args[0] == "create":
                 # Create a room or space
                 # Figure out the actual parameters
                 args = self.args[1:]

@@ -142,6 +142,12 @@ class Storage(object):
         """, (room_id,))
         self.conn.commit()
 
+    def set_room_alias(self, room_id: str, alias: str) -> None:
+        self.cursor.execute("""
+            update rooms set alias = ? where room_id = ?;
+        """, (alias.split(":")[0].strip("#"), room_id))
+        self.conn.commit()
+
     def set_room_id(self, alias: str, room_id: str) -> None:
         self.cursor.execute("""
             update rooms set room_id = ? where alias = ?;

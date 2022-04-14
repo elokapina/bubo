@@ -13,6 +13,9 @@ from nio import (
 )
 # noinspection PyPackageRequirements
 from nio.http import TransportResponse
+# TODO fix missing __all__ in matrix-nio
+# noinspection PyProtectedMember, PyPackageRequirements
+from nio.responses import RoomPutAliasError, RoomDeleteAliasError
 
 from bubo import synapse_admin
 from bubo.chat_functions import invite_to_room, send_text_to_room, send_text_to_room_c2s
@@ -21,6 +24,20 @@ from bubo.storage import Storage
 from bubo.utils import with_ratelimit, get_users_for_access, ensure_room_id
 
 logger = logging.getLogger(__name__)
+
+
+async def add_alias(room_alias_or_id: str, alias: str, client: AsyncClient) -> None:
+    """
+    Add a new alias to a room. Doesn't make it canonical, also
+    doesn't modify Bubo database which contains canonical aliases only.
+    """
+    room_id = await ensure_room_id(client, room_alias_or_id)
+    response = await client.room_put_alias(
+        room_alias=alias,
+        room_id=room_id,
+    )
+    if isinstance(response, RoomPutAliasError):
+        raise Exception(f"Failed to add alias {alias} to room {room_id}: {response.message}")
 
 
 async def add_membership_in_space(
@@ -519,18 +536,24 @@ async def recreate_room(
         # Add aliases to the new room
         if alias or alt_aliases:
             if alias:
-                await client.room_put_alias(
-                    room_alias=alias,
-                    room_id=new_room.room_id,
-                )
-            await client.room_put_state(
-                room_id=new_room.room_id,
-                event_type="m.room.canonical_alias",
-                content={
-                    "alias": alias,
-                    "alt_aliases": alt_aliases,
-                },
-            )
+                # noinspection PyBroadException
+                try:
+                    await add_alias(room_alias_or_id=new_room.room_id, alias=alias, client=client)
+                except Exception:
+                    await send_text_to_room_c2s(
+                        config,
+                        new_room.room_id,
+                        f"**Warning**: There was an error updating the alias of the new room - please see bot logs",
+                    )
+                else:
+                    await client.room_put_state(
+                        room_id=new_room.room_id,
+                        event_type="m.room.canonical_alias",
+                        content={
+                            "alias": alias,
+                            "alt_aliases": alt_aliases,
+                        },
+                    )
 
         # Room directory
         async with aiohttp.ClientSession() as session:
@@ -573,8 +596,76 @@ async def recreate_room(
             logger.error(f"Failed to inform of error to the room to be recreated: {ex}")
 
 
+async def remove_alias(room_alias_or_id: str, alias: str, client: AsyncClient) -> None:
+    """
+    Remove alias from a room.
+
+    Cannot be used to remove the canonical alias.
+    """
+    room_id = await ensure_room_id(client, room_alias_or_id)
+    # Check not canonical
+    response = await client.room_get_state_event(
+        room_id=room_id,
+        event_type="m.room.canonical_alias",
+    )
+    if isinstance(response, RoomGetStateEventError) or response.content.get("alias") == alias:
+        raise Exception("Unable to remove canonical alias or canonical alias not found")
+
+    # Remove
+    response = await client.room_delete_alias(
+        room_alias=alias,
+    )
+    if isinstance(response, RoomDeleteAliasError):
+        raise Exception(f"Failed to delete alias {alias} from room {room_id}: {response.message}")
+
+
+async def set_canonical_alias(
+    room_alias_or_id: str, alias: str, client: AsyncClient, store: Storage, config: Config,
+) -> None:
+    """
+    Set a room alias as canonical (ie main alias).
+
+    Also updates Bubo database, if the room is registered to Bubo.
+    """
+    # If Bubo owned room, only allow local aliases
+    # Because of previous decisions to store aliases as the localpart.
+    # To remove this restriction, refractoring needs to be done.
+    try:
+        if alias.split(':')[1] != config.server_name:
+            raise Exception("Currently can only set canonical aliases to same server where the bot runs, sorry.")
+    except IndexError:
+        raise Exception("Alias format seems wrong, should be for example #alias:domain.tld")
+
+    room_id = await ensure_room_id(client, room_alias_or_id)
+    # Get any previous alt aliases
+    alt_aliases = []
+    response = await client.room_get_state_event(
+        room_id=room_id,
+        event_type="m.room.canonical_alias",
+    )
+    if isinstance(response, RoomGetStateEventResponse):
+        alt_aliases = response.content.get("alt_aliases", [])
+
+    # Set the canonical alias
+    await client.room_put_state(
+        room_id=room_id,
+        event_type="m.room.canonical_alias",
+        content={
+            "alias": alias,
+            "alt_aliases": alt_aliases,
+        },
+    )
+    if isinstance(response, RoomPutStateError):
+        raise Exception(f"Failed to set canonical alias {alias} for room {room_id}: {response.message}")
+
+    # Update Bubo db if needed, assuming this is a locally owned alias
+    room = store.get_room_by_alias(alias)
+    if room:
+        store.set_room_alias(room_id, alias)
+
+
 async def set_join_rules(
-    room_alias_or_id: str, join_rule: str, client: AsyncClient, allow: Dict = None,
+    room_alias_or_id: str, join_rule: str, client: AsyncClient, allow: List = None,
 ) -> None:
     """
     Set a join rule for a room or space.

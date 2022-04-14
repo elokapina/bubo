@@ -133,11 +133,32 @@ Maintains rooms.
 
 When given without parameters, Bubo will tell you about the rooms it maintains.
 
-Subcommands:
+Subcommands below.
 
-* `create`
+##### `alias` - Manage room aliases
 
-Create a room using Bubo. Syntax:
+Allows adding and removing aliases, and setting the main (canonical) alias of a room.
+
+Format:
+
+    rooms alias !roomidoralias:domain.tld subcommand #alias:domain.tld
+    
+Where "subcommand" can be one of: "add", "remove", "main".
+
+Examples:
+
+    rooms alias !roomidoralias:domain.tld add #alias:domain.tld 
+    rooms alias !roomidoralias:domain.tld remove #alias:domain.tld 
+    rooms alias !roomidoralias:domain.tld main #alias:domain.tld
+    
+Notes:
+
+* "remove" cannot remove the main alias. First add another alias and set it main alias.
+* "main" can only handle aliases for the same domain Bubo runs on currently. This may change in the future.  
+
+##### `create` - Create room
+
+Syntax:
 
     rooms create NAME ALIAS TITLE ENCRYPTED(yes/no) PUBLIC(yes/no)
     
@@ -148,7 +169,7 @@ Example:
 Note, ALIAS should only contain lower case ascii characters and dashes. 
 ENCRYPTED and PUBLIC are either 'yes' or 'no'.
 
-* `link` and `link-and-admin`
+##### `link` and `link-and-admin` - Register rooms with Bubo
 
 Both variants make Bubo attempt to join the room and store the room in the database to 
 start tracking it. If Bubo is Synapse admin and/or admin permissions is requested, 
@@ -156,15 +177,15 @@ it will also try to join and/or make itself admin using the Synapse admin API.
 
 The only parameter is a room ID or alias.
 
-* `list`
+##### `list` - List rooms
 
 Same as without a subcommand, Bubo will tell you all about the rooms it maintains.
 
-* `list-no-admin`
+##### `list-no-admin` - List rooms without Bubo admin privileges
 
 List any rooms Bubo maintains where Bubo lacks admin privileges. 
 
-* `recreate`
+##### `recreate` - Recreate a room
 
 Recreate a room. This is a bit like the room upgrade functionality in Element, but it's designed to
 also work when admin power levels have been lost in the room, and thus an upgrade cannot be done.
@@ -186,11 +207,11 @@ stay as it is, so in problem cases it should be enough to just rename the old ro
 This command requires Bubo admin privileges. It does not require Bubo to have any special power
 in the room to be recreated.
  
-* `unlink`
+##### `unlink` - Unregister a room
 
   Remove the room from Bubo's room database. The only parameter is a room ID or alias.
   
-* `unlink-and-leave`
+##### `unlink-and-leave` - Unregister a room and leave it
 
   Remove the room from Bubo's room database, then leave the room. The only parameter is a room ID or alias.
 
@@ -211,22 +232,22 @@ See `sample.config.yaml` for how to configure a Keycloak client.
 
 Subcommands:
 
-* `list` (or no subcommand)
+##### `list` (or no subcommand)
 
   List currently registered users. Requires admin level permissions.
 
-* `create`
+##### `create`
 
   Creates users for the given emails and sends them a password reset email. The users
   email will be marked as verified. Give one or more emails as parameters. Requires admin level permissions.
 
-* `invite`
+##### `invite`
   
   Send an invitation to the email(s) given for self-registration. Requires
   an instance of [keycloak-signup](https://github.com/elokapina/keycloak-signup).
   The invitation will contain a one-time link valid for 7 days. Requires coordinator level permissions.
 
-* `signuplink`
+##### `signuplink`
 
   Create a self-service signup link with a chosen amount of maximum signups
   and days of validity. Requires an instance of 

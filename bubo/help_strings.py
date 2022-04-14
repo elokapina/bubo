@@ -78,6 +78,28 @@ Subcommands:
 HELP_ROOMS = HELP_ROOMS_AND_SPACES.replace("%%TYPES%%", "rooms").replace("%%TYPE%%", "room")
 HELP_SPACES = HELP_ROOMS_AND_SPACES.replace("%%TYPES%%", "spaces").replace("%%TYPE%%", "space")
 
+HELP_ROOMS_ALIAS = """Manage room aliases.
+
+Allows adding and removing aliases, and setting the main (canonical) alias of a room.
+
+Format:
+
+    rooms alias !roomidoralias:domain.tld subcommand #alias:domain.tld
+    
+Where "subcommand" can be one of: "add", "remove", "main".
+
+Examples:
+
+    rooms alias !roomidoralias:domain.tld add #alias:domain.tld 
+    rooms alias !roomidoralias:domain.tld remove #alias:domain.tld 
+    rooms alias !roomidoralias:domain.tld main #alias:domain.tld
+    
+Notes:
+
+* "remove" cannot remove the main alias. First add another alias and set it main alias.
+* "main" can only handle aliases for the same domain Bubo runs on currently. This may change in the future.  
+"""
+
 HELP_ROOMS_RECREATE = """Recreates a room.
 
 This command is useful for example if the room has no admins. It will recreate the room using the bot,

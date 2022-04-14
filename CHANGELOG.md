@@ -12,6 +12,9 @@
   is Synapse admin and/or admin permissions is requested, it will also try to join and/or
   make itself admin using the Synapse admin API.
 
+* Add `rooms` subcommand `alias`. Allows maintaining aliases for rooms, including
+  adding, removing and setting the main alias.
+
 ### Fixed
 
 * Force `charset_normalizer` dependency logs to `warning` level to avoid spammy info
