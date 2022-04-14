@@ -251,8 +251,8 @@ class Discourse:
                             room_alias_or_id=room_id,
                             join_rule="restricted",
                             client=client,
-                            allow={
+                            allow=[{
                                 "room_id": space_id,
                                 "type": "m.room_membership",
-                            }
+                            }]
                         )
