@@ -668,7 +668,7 @@ class Command(object):
                         username = None
                         username_candidate = email.split('@')[0]
                         username_candidate = username_candidate.lower()
-                        username_candidate = re.sub(r'[^a-z0-9._\-]', '', username_candidate)
+                        username_candidate = re.sub(r'[^a-z\d._\-]', '', username_candidate)
                         candidate = username_candidate
                         counter = 0
                         while not username:
