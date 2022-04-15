@@ -7,7 +7,7 @@ from email_validator import validate_email, EmailNotValidError
 # noinspection PyPackageRequirements
 from nio import (
     RoomPutStateError, RoomGetStateEventError, RoomPutStateResponse, ProtocolError, JoinedRoomsError,
-    JoinError, RoomGetStateEventResponse,
+    JoinError, RoomGetStateEventResponse, RoomInviteError,
 )
 # noinspection PyPackageRequirements
 from nio.schemas import check_user_id
@@ -20,7 +20,7 @@ from bubo.rooms import (
     ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels, recreate_room,
     add_alias, remove_alias, set_canonical_alias,
 )
-from bubo.synapse_admin import make_room_admin
+from bubo.synapse_admin import make_room_admin, join_users
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
 from bubo.utils import get_users_for_access, with_ratelimit, ensure_room_id
 
@@ -99,6 +99,8 @@ class Command(object):
             await self._show_help()
         elif self.command.startswith("invite"):
             await self._invite()
+        elif self.command.startswith("join"):
+            await self._join()
         elif self.command.startswith("power"):
             await self._power()
         elif self.command.startswith("rooms"):
@@ -320,6 +322,44 @@ class Command(object):
                     else:
                         await invite_to_room(self.client, room_id, user_id, self.room.room_id, self.args[0])
                 return
+
+    async def _join(self):
+        """
+        Join a user to a room.
+
+        If Bubo is not a Synapse admin, fall back to regular invite.
+        Either way, Bubo needs to be in the room.
+        """
+        if not await self._ensure_coordinator():
+            return
+
+        if len(self.args) < 2:
+            await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_JOIN)
+            return
+
+        room_id_or_alias = self.args[0]
+        users = self.args[1:]
+
+        joined = 0
+        invited = 0
+        if self.config.is_synapse_admin:
+            joined = await join_users(self.config, users, room_id_or_alias)
+
+        room_id = await ensure_room_id(client=self.client, room_id_or_alias=room_id_or_alias)
+
+        if not self.config.is_synapse_admin or joined != len(users):
+            # Fallback invites
+            for user in users:
+                response = await self.client.room_invite(room_id, user)
+                if isinstance(response, RoomInviteError):
+                    logger.warning(f"Failed to invite user {user} to room {room_id}: "
+                                   f"{response.message} / {response.status_code}")
+                else:
+                    invited += 1
+        await send_text_to_room(
+            self.client, self.room.room_id,
+            f"Joined {joined} users and invited {invited} users to room {room_id}",
+        )
 
     async def _power(self):
         """Set power in a room.

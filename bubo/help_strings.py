@@ -35,6 +35,19 @@ Requires bot coordinator privileges. The bot must be in the room
 and with power to invite users.  
 """
 
+HELP_JOIN = """Join one or more users to rooms.
+
+Syntax:
+
+    join !roomidoralias:domain.tld @user1:domain.tld @user2:domain.tld
+    
+If Bubo has Synapse admin powers, it will try to join admin API join any local users
+(which still requires Bubo to be in the room and be able to invite).
+Otherwise, a normal onvitation is used.
+
+This command requires coordinator level permissions.
+"""
+
 HELP_ROOMS_AND_SPACES = """Maintains %%TYPES%%.
 
 When given without parameters, Bubo will tell you about the %%TYPES%% it maintains.
@@ -97,7 +110,9 @@ Examples:
 Notes:
 
 * "remove" cannot remove the main alias. First add another alias and set it main alias.
-* "main" can only handle aliases for the same domain Bubo runs on currently. This may change in the future.  
+* "main" can only handle aliases for the same domain Bubo runs on currently. This may change in the future.
+
+This command requires coordinator level permissions.
 """
 
 HELP_ROOMS_RECREATE = """Recreates a room.

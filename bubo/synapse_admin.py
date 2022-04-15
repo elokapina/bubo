@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 from typing import List, Optional, Dict
+from urllib.parse import quote_plus
 
 import aiohttp
 
@@ -54,7 +55,7 @@ async def join_user(
     config: Config, headers: Dict, room_id_or_alias: str, session: aiohttp.ClientSession, user: str,
 ) -> bool:
     async with session.post(
-        f"{config.homeserver_url}{API_PREFIX_V1}/join/{room_id_or_alias}",
+        f"{config.homeserver_url}{API_PREFIX_V1}/join/{quote_plus(room_id_or_alias)}",
         json={
             "user_id": user,
         },

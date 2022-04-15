@@ -15,6 +15,9 @@
 * Add `rooms` subcommand `alias`. Allows maintaining aliases for rooms, including
   adding, removing and setting the main alias.
 
+* Add `join` command, which allows (Synapse admin) force joining users to rooms or as 
+  a fallback inviting users to rooms.
+
 ### Fixed
 
 * Force `charset_normalizer` dependency logs to `warning` level to avoid spammy info
