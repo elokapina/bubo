@@ -381,6 +381,7 @@ async def get_room_directory_status(config: Config, session: aiohttp.ClientSessi
 
 async def recreate_room(
     room: MatrixRoom, client: AsyncClient, config: Config, store: Storage, last_event_id: str,
+    keep_encryption: bool = True,
 ) -> Optional[str]:
     """
     Replace a room with a new room.
@@ -430,7 +431,7 @@ async def recreate_room(
         remote_users = [user for user in users if not user.endswith(f":{config.server_name}")
                         and user != config.user_id]
         initial_state = []
-        if room.encrypted:
+        if room.encrypted and keep_encryption:
             initial_state.append({
                 "type": "m.room.encryption",
                 "state_key": "",

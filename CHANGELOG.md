@@ -18,6 +18,10 @@
 * Add `join` command, which allows (Synapse admin) force joining users to rooms or as 
   a fallback inviting users to rooms.
 
+### Changed
+
+* Allow removing room encryption by recreating with `rooms recreate-unencrypted` command.
+
 ### Fixed
 
 * Force `charset_normalizer` dependency logs to `warning` level to avoid spammy info

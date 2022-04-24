@@ -470,7 +470,13 @@ class Command(object):
             elif self.args[0] == "list-no-admin":
                 text = await self._list_no_admin_rooms(spaces=space)
             elif self.args[0] == 'recreate':
-                return await self._recreate_room(subcommand=self.args[1] if len(self.args) > 1 else None)
+                return await self._recreate_room(
+                    subcommand=self.args[1] if len(self.args) > 1 else None, keep_encryption=True,
+                )
+            elif self.args[0] == 'recreate-unencrypted':
+                return await self._recreate_room(
+                    subcommand=self.args[1] if len(self.args) > 1 else None, keep_encryption=False,
+                )
             elif self.args[0] == 'unlink':
                 await self._unlink_room(leave=False)
             elif self.args[0] == 'unlink-and-leave':
@@ -639,7 +645,7 @@ class Command(object):
         text += "".join(rooms_list)
         return text
 
-    async def _recreate_room(self, subcommand):
+    async def _recreate_room(self, subcommand: str, keep_encryption: bool = True):
         """
         Command to recreate a room. Useful if the room has no admins.
         """
@@ -683,7 +689,9 @@ class Command(object):
             )
 
         # OK confirmation over, let's do stuff
-        new_room_id = await recreate_room(self.room, self.client, self.config, self.store, self.event.event_id)
+        new_room_id = await recreate_room(
+            self.room, self.client, self.config, self.store, self.event.event_id, keep_encryption=keep_encryption,
+        )
         if not new_room_id:
             return await send_text_to_room(
                 self.client, self.room.room_id,
