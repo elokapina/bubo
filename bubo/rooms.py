@@ -138,24 +138,6 @@ async def create_breakout_room(
     return room_id
 
 
-async def ensure_room_encrypted(room_id: str, client: AsyncClient):
-    """
-    Ensure room is encrypted.
-    """
-    state = await client.room_get_state_event(room_id, "m.room.encryption")
-    if state.content.get('errcode') == 'M_NOT_FOUND':
-        event_dict = EnableEncryptionBuilder().as_dict()
-        response = await client.room_put_state(
-            room_id=room_id,
-            event_type=event_dict["type"],
-            content=event_dict["content"],
-        )
-        if isinstance(response, RoomPutStateError):
-            if response.status_code == "M_LIMIT_EXCEEDED":
-                time.sleep(3)
-                return ensure_room_encrypted(room_id, client)
-
-
 async def delete_user_room_tag(
     config: Config, session: aiohttp.ClientSession, user: str, room_id: str, token: str, tag: str,
 ) -> bool:
@@ -244,11 +226,6 @@ async def ensure_room_exists(
     logger.debug("Ensuring %s: %s", room_type, room)
     room_created = False
     logger.info("Ensuring %s %s (%s) exists", room_type, name, alias)
-    state = []
-    if encrypted:
-        state.append(
-            EnableEncryptionBuilder().as_dict(),
-        )
 
     if not dbid:
         # Check if we track this room already
@@ -268,6 +245,11 @@ async def ensure_room_exists(
             logger.info("Could not resolve %s '%s', will try create", room_type, alias)
             # Create room
             space = room_type == "space"
+            state = []
+            if encrypted:
+                state.append(
+                    EnableEncryptionBuilder().as_dict(),
+                )
             if not dry_run:
                 response = await client.room_create(
                     visibility=RoomVisibility.public if public else RoomVisibility.private,
@@ -302,14 +284,6 @@ async def ensure_room_exists(
             else:
                 store.store_room(name, alias, room_id, title, encrypted, public, room_type)
                 logger.info("%s '%s' creation stored to database", room_type, alias)
-
-    if encrypted and not dry_run:
-        await ensure_room_encrypted(room_id, client)
-
-        # TODO ensure room name + title
-        # TODO ensure room alias
-
-    # TODO Add rooms to communities
 
     if not dry_run:
         room_members = await with_ratelimit(client, "joined_members", room_id)
@@ -801,7 +775,7 @@ async def maintain_configured_rooms(client: AsyncClient, store: Storage, config:
     logger.info("Starting maintaining of rooms")
 
     results = store.cursor.execute("""
-        select * from rooms
+        select id, name, alias, room_id, title, icon, encrypted, public, type from rooms
     """)
 
     rooms = results.fetchall()

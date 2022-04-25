@@ -38,6 +38,12 @@
 
 * Fixed incorrect check for invalid coordinator room / user ID's when loading config ([#17](https://github.com/elokapina/bubo/pull/17)).
 
+### Removed
+
+* Removed any attempts to maintain room encryption for old rooms on startup. This code
+  seems to have been broken and seems like a footgun waiting to happen. It should
+  be replaced with a manual "encrypt room" command if needed.
+
 ## v0.3.0 - 2022-01-23
 
 ### Added
