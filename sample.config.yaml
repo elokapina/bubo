@@ -119,6 +119,16 @@ rooms:
   # Prefix to use when renaming old recreated rooms
   recreate_old_room_name_prefix: "OLD"
 
+  # Room groups
+  # Here you can create groups of rooms, which can be used by with the "groupjoin" command
+  # to join one or more users to a group of rooms with one command.
+  # Example value:
+  # groups:
+  #   group1:
+  #     rooms:
+  #       - "#room:domain.tld"
+  #       - "!123456789:domain.tld"
+
 # Configuration related to bot callbacks
 callbacks:
   # Send a 'unable to decrypt this message' reply to the room if Bubo can't decrypt a message.

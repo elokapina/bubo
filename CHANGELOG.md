@@ -18,6 +18,10 @@
 * Add `join` command, which allows (Synapse admin) force joining users to rooms or as 
   a fallback inviting users to rooms.
 
+* Add `groupjoin` command, which allows (Synapse admin) force joining users to a group
+  of rooms or as a fallback inviting users to rooms. Room groups are preconfigured in
+  the config file.
+
 ### Changed
 
 * Allow removing room encryption by recreating with `rooms recreate-unencrypted` command.

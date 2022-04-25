@@ -1,7 +1,9 @@
 import csv
+import json
 import logging
 import re
 import time
+from typing import List
 
 from email_validator import validate_email, EmailNotValidError
 # noinspection PyPackageRequirements
@@ -95,6 +97,8 @@ class Command(object):
             await self._communities()
         elif self.command.startswith("discourse"):
             await self._discourse()
+        elif self.command.startswith("groupjoin"):
+            await self._groupjoin()
         elif self.command.startswith("help"):
             await self._show_help()
         elif self.command.startswith("invite"):
@@ -280,6 +284,41 @@ class Command(object):
         discourse = Discourse()
         await discourse.sync_groups_as_spaces(self.client, self.store)
 
+    @property
+    def _configured_groups_text(self) -> str:
+        return f"All configured groups:\n\n{json.dumps(self.config.rooms.get('groups', {}), indent=4)}"
+
+    async def _groupjoin(self):
+        """
+        Join one or more users to a predefined group of rooms.
+
+        If Bubo is not a Synapse admin, fall back to regular invite.
+        Either way, Bubo needs to be in the room.
+        """
+        if not await self._ensure_coordinator():
+            return
+
+        if len(self.args) == 0:
+            await send_text_to_room(self.client, self.room.room_id, self._configured_groups_text)
+            return
+        elif len(self.args) < 2:
+            await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_GROUPJOIN)
+            return
+
+        group_name = self.args[0]
+        users = self.args[1:]
+
+        rooms = self.config.rooms.get("groups", {}).get(group_name, {}).get("rooms", [])
+        if not rooms:
+            await send_text_to_room(
+                self.client, self.room.room_id,
+                f"Invalid group '{group_name}' or group has no rooms. {self._configured_groups_text}"
+            )
+            return
+
+        for room in rooms:
+            await self._join_users_to_room(room, users)
+
     async def _invite(self):
         """Handle an invitation command"""
         if not await self._ensure_coordinator():
@@ -340,8 +379,12 @@ class Command(object):
         room_id_or_alias = self.args[0]
         users = self.args[1:]
 
+        await self._join_users_to_room(room_id_or_alias, users)
+
+    async def _join_users_to_room(self, room_id_or_alias: str, users: List[str]) -> None:
         joined = 0
         invited = 0
+
         if self.config.is_synapse_admin:
             joined = await join_users(self.config, users, room_id_or_alias)
 

@@ -14,6 +14,24 @@ More help on commands or subcommands using 'help' as the next parameter.
 For source code, see https://github.com/elokapina/bubo
 """
 
+HELP_GROUPJOIN = """Join one or more users to a predefined group of rooms.
+
+Syntax:
+
+    groupjoin groupname @user1:domain.tld @user2:domain.tld
+
+Where "groupname" should be replaced with the group to join to. Groups can be listed
+by giving the command without any extra parameters, eg just "groupjoin".
+
+Groups must be configured to the Bubo configuration file by an administrator.
+
+If Bubo has Synapse admin powers, it will try to join admin API join any local users
+(which still requires Bubo to be in the room and be able to invite).
+Otherwise, a normal onvitation is used.
+
+This command requires coordinator level permissions.
+"""
+
 HELP_INVITE = """"Invite to rooms.
 
 When given with only a room alias or ID parameter, invites you to that room.
