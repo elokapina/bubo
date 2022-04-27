@@ -122,10 +122,20 @@ rooms:
   # Room groups
   # Here you can create groups of rooms, which can be used by with the "groupjoin" command
   # to join one or more users to a group of rooms with one command.
+  #
+  # Each level of groups (including the root level) can have a special key "__all__", which
+  # is a list of rooms users will be joined to for groups on this level or lower.
+  #
+  # A group can also just be a list of rooms for the lowest level.
+  #
   # Example value:
   # groups:
+  #   __all__:
+  #     - #common:domain.tld"
   #   group1:
-  #     rooms:
+  #     __all__:
+  #       - "#coolspace:domain.tld"
+  #     subgroup1:
   #       - "#room:domain.tld"
   #       - "!123456789:domain.tld"
 

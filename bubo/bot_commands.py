@@ -1,9 +1,8 @@
 import csv
-import json
 import logging
 import re
 import time
-from typing import List
+from typing import List, Union, Dict, Tuple
 
 from email_validator import validate_email, EmailNotValidError
 # noinspection PyPackageRequirements
@@ -97,8 +96,10 @@ class Command(object):
             await self._communities()
         elif self.command.startswith("discourse"):
             await self._discourse()
+        elif self.command.startswith("groupinvite"):
+            await self._groupinvite()
         elif self.command.startswith("groupjoin"):
-            await self._groupjoin()
+            await self._groupinvite()
         elif self.command.startswith("help"):
             await self._show_help()
         elif self.command.startswith("invite"):
@@ -284,40 +285,61 @@ class Command(object):
         discourse = Discourse()
         await discourse.sync_groups_as_spaces(self.client, self.store)
 
-    @property
-    def _configured_groups_text(self) -> str:
-        return f"All configured groups:\n\n{json.dumps(self.config.rooms.get('groups', {}), indent=4)}"
-
-    async def _groupjoin(self):
+    async def _groupinvite(self):
         """
-        Join one or more users to a predefined group of rooms.
-
-        If Bubo is not a Synapse admin, fall back to regular invite.
-        Either way, Bubo needs to be in the room.
+        Invite user to a predefined group of rooms.
         """
         if not await self._ensure_coordinator():
             return
 
-        if len(self.args) == 0:
-            await send_text_to_room(self.client, self.room.room_id, self._configured_groups_text)
-            return
-        elif len(self.args) < 2:
-            await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_GROUPJOIN)
+        if len(self.args) < 2:
+            await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_GROUPINVITE)
             return
 
-        group_name = self.args[0]
-        users = self.args[1:]
+        user = self.args[0]
+        groups = self.args[1:]
 
-        rooms = self.config.rooms.get("groups", {}).get(group_name, {}).get("rooms", [])
+        async def _get_group_rooms(group: Union[List, Dict], remaining_groups: Tuple, room_list: List) -> List:
+            new_room_list = room_list[:]
+            if isinstance(group, dict):
+                new_room_list.extend(group.get("__all__", []))
+                if remaining_groups:
+                    next_group = group.get(remaining_groups[0])
+                    if not next_group:
+                        await send_text_to_room(
+                            self.client, self.room.room_id,
+                            f"Invalid group '{remaining_groups[0]}' or group has no rooms."
+                        )
+                        return []
+                    remaining_groups = remaining_groups[1:] if len(remaining_groups) > 1 else ()
+                    return await _get_group_rooms(next_group, remaining_groups, new_room_list)
+                return new_room_list
+            elif isinstance(group, list):
+                new_room_list.extend(group)
+            return new_room_list
+
+        first_group = self.config.rooms.get("groups", {}).get(groups[0])
+        if not first_group:
+            await send_text_to_room(
+                self.client, self.room.room_id,
+                f"Invalid group '{groups[0]}' or group has no rooms."
+            )
+            return
+        subgroups = groups[1:] if len(groups) > 1 else ()
+
+        initial_rooms = self.config.rooms.get("groups", {}).get("__all__", [])
+
+        rooms = await _get_group_rooms(first_group, subgroups, initial_rooms)
         if not rooms:
             await send_text_to_room(
                 self.client, self.room.room_id,
-                f"Invalid group '{group_name}' or group has no rooms. {self._configured_groups_text}"
+                f"No rooms found for groups {' '.join(groups)}."
             )
             return
 
         for room in rooms:
-            await self._join_users_to_room(room, users)
+            room_id = await ensure_room_id(client=self.client, room_id_or_alias=room)
+            await invite_to_room(self.client, room_id, user, self.room.room_id, ignore_in_room=True)
 
     async def _invite(self):
         """Handle an invitation command"""

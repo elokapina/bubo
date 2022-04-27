@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 async def invite_to_room(
     client: AsyncClient, room_id: str, user_id: str, command_room_id: str = None, room_alias: str = None,
+    ignore_in_room: bool = False,
 ):
     """Invite a user to a room"""
     response = await client.room_invite(room_id, user_id)
@@ -28,6 +29,13 @@ async def invite_to_room(
             await invite_to_room(client, room_id, user_id, command_room_id, room_alias)
             return
         if command_room_id:
+            if ignore_in_room and response.message.find("is already in the room") > -1:
+                await send_text_to_room(
+                    client,
+                    command_room_id,
+                    f"{user_id} already in room {room_alias or room_id}",
+                )
+                return
             await send_text_to_room(
                 client,
                 command_room_id,
