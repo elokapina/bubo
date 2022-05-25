@@ -9,7 +9,7 @@ import sqlite3
 # noinspection PyPackageRequirements
 from nio import MegolmEvent
 
-latest_db_version = 9
+latest_db_version = 10
 
 logger = logging.getLogger(__name__)
 
@@ -160,14 +160,6 @@ class Storage(object):
                 (event_id, room_id) values 
                 (?, ?);
         """, (event_id, room_id))
-        self.conn.commit()
-
-    def store_community(self, name: str, alias: str, title: str):
-        self.cursor.execute("""
-            insert into communities
-                (name, alias, title) values 
-                (?, ?, ?);
-        """, (name, alias, title))
         self.conn.commit()
 
     def store_encrypted_event(self, event: MegolmEvent):

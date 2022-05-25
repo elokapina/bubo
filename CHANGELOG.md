@@ -45,6 +45,8 @@
   seems to have been broken and seems like a footgun waiting to happen. It should
   be replaced with a manual "encrypt room" command if needed.
 
+* Removed the `communities` command. Existing configured communities will not be tracked.
+
 ## v0.3.0 - 2022-01-23
 
 ### Added

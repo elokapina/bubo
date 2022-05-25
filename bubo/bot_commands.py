@@ -15,7 +15,6 @@ from nio.schemas import check_user_id
 
 from bubo import help_strings
 from bubo.chat_functions import send_text_to_room, invite_to_room
-from bubo.communities import ensure_community_exists
 from bubo.discourse import Discourse
 from bubo.rooms import (
     ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels, recreate_room,
@@ -81,8 +80,6 @@ class Command(object):
         """Process the command"""
         if self.command.startswith("breakout"):
             await self._breakout()
-        elif self.command.startswith("communities"):
-            await self._communities()
         elif self.command.startswith("discourse"):
             await self._discourse()
         elif self.command.startswith("groupinvite"):
@@ -191,63 +188,6 @@ class Command(object):
                 text = "*Error: failed to store breakout room data. The room was created, " \
                        "but invites via reactions will not work.*"
                 await send_text_to_room(self.client, self.room.room_id, text)
-
-    async def _communities(self):
-        """List and operate on communities"""
-        if not await self._ensure_coordinator():
-            return
-        if self.args:
-            if self.args[0] == "create":
-                # Create a community
-                # Figure out the actual parameters
-                args = self.args[1:]
-                params = csv.reader([' '.join(args)], delimiter=" ")
-                params = [param for param in params][0]
-                if len(params) != 3 or params[0] == "help":
-                    text = "NOTE! Communities support is deprecated and will be removed in Bubo v0.4.0.\n" \
-                           "\n" \
-                           "Wrong number of arguments. Usage:\n" \
-                           "\n" \
-                           "`communities create NAME ALIAS TITLE`\n" \
-                           "\n" \
-                           "For example:\n" \
-                           "\n" \
-                           "communities create \"My epic community\" epic-community \"The best community ever!\"\n" \
-                           "\n" \
-                           "Note, ALIAS should only contain lower case ascii characters and dashes (maybe)."
-                else:
-                    result, error = await ensure_community_exists(
-                        (None, params[0], params[1], params[2], None, None),
-                        self.config,
-                    )
-                    if result == "created":
-                        text = f"NOTE! Communities support is deprecated and will be removed in Bubo v0.4.0.\n" \
-                               f"\n" \
-                               f"Community {params[0]} (+{params[1]}:{self.config.server_name}) " \
-                               f"created successfully."
-                        self.store.store_community(params[0], params[1], params[2])
-                    elif result == "exists":
-                        text = f"NOTE! Communities support is deprecated and will be removed in Bubo v0.4.0.\n" \
-                               f"\n" \
-                               f"Sorry! Community {params[0]} (+{params[1]}:{self.config.server_name}) " \
-                               f"already exists."
-                    else:
-                        text = f"Error creating community: {error}"
-            else:
-                text = "Unknown subcommand!"
-        else:
-            text = "NOTE! Communities support is deprecated and will be removed in Bubo v0.4.0.\n" \
-                   "\n" \
-                   "I currently maintain the following communities:\n\n"
-            results = self.store.cursor.execute("""
-                select * from communities
-            """)
-            communities = []
-            dbresult = results.fetchall()
-            for community in dbresult:
-                communities.append(f"* {community[1]} / +{community[2]}:{self.config.server_name} / {community[3]}\n")
-            text += "".join(communities)
-        await send_text_to_room(self.client, self.room.room_id, text)
 
     async def _discourse(self):
         """Discourse integration"""

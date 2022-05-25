@@ -27,11 +27,6 @@ matrix:
   is_synapse_admin: false
 
 # Different commands might require a permission.
-# Here we list the minimum permission needed for the command.
-#
-# - "communities" - listing or maintaining communities: coordinator
-# - "rooms" - listing or maintaining rooms: coordinator
-# - "invite" - invite a user to a room: coordinator
 permissions:
   # Users or list of users based on room membership, who are allowed to do anything with the bot.
   # Note currently this is actually just the same as coordinator, but more powerful

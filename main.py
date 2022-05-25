@@ -24,7 +24,6 @@ from nio import (
 )
 
 from bubo.callbacks import Callbacks
-from bubo.communities import maintain_configured_communities
 from bubo.config import Config, load_config
 from bubo.rooms import maintain_configured_rooms
 from bubo.storage import Storage
@@ -106,9 +105,6 @@ async def main(config: Config):
 
             # Maintain rooms
             await maintain_configured_rooms(client, store, config)
-
-            # Maintain communities
-            await maintain_configured_communities(store, config)
 
             logger.info(f"Logged in as {config.user_id}")
             await client.sync_forever(timeout=30000, full_state=True)

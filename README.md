@@ -68,33 +68,6 @@ Any remaining text after `breakout` will be used as the room name.
 Note that while Bubo will stay in the breakout room itself, it will not maintain
 it in any way like the rooms created using the `rooms` command.
 
-#### `communities`
-
-Maintain communities.
-
-*NOTE: This command currently operates on the communities implemented in Synapse
-without a stable spec. When communities are redesigned, this command will be ported
-to work with the new style communities.*
-
-Ensure your Synapse settings allow community creation for non-admins or make Bubo
-an admin. It's probably safe, but no Bubo author will take responsibility.
-
-With no subcommands, Bubo will tell you which communities it maintains.
-
-Subcommands:
-
-* `create`
-
-Create a community. Syntax:
-
-    communities create NAME ALIAS TITLE
-    
-For example:
-
-    communities create "My epic community" epic-community "The best community ever!"
-    
-Note, ALIAS should only contain lower case ascii characters and dashes (maybe).
-
 #### `help`
 
 Shows a help! Each command can also be given a subcommand `help`, to make
@@ -278,15 +251,15 @@ The sample config contains `room.power_levels` for the default power levels that
 Bubo will use for new rooms. By default, it will also enforce these power levels on
 old rooms, unless told not to.
 
-### Room and community maintenance
+### Room and space maintenance
 
-When Bubo starts, it will go through the rooms and communities it maintains (see above
+When Bubo starts, it will go through the rooms and spaces it maintains (see above
 commands). It will currently ensure the following details are correct:
 
-* Room or community exists (tip! you can mass-create rooms/communities by inserting them to
+* Room or space exists (tip! you can mass-create rooms/spaces by inserting them to
   the database without an ID and restarting)
-* Ensure rooms marked as encrypted are encrypted
-* Ensure room power levels (see above "Room power levels") 
+* Ensure rooms/spaces marked as encrypted are encrypted
+* Ensure room/spaces power levels (see above "Room power levels") 
 
 ## Development
 
