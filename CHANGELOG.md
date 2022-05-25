@@ -25,6 +25,8 @@
 
 * Allow removing room encryption by recreating with `rooms recreate-unencrypted` command.
 
+* The `invite` command will now check the user exists before sending an invitation.
+
 ### Fixed
 
 * Force `charset_normalizer` dependency logs to `warning` level to avoid spammy info
