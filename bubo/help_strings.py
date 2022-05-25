@@ -4,7 +4,7 @@ Available commands:
 
 * breakout - Create a breakout room
 * groupinvite - Invite a pre-defined group to a room
-* groupjoin - Join a pre-defined group to a room
+* groupjoin - Alias for `groupinvite`
 * invite - Invite one or more users to a room
 * join - Join a user to a room
 * power - Set power levels in rooms
@@ -17,18 +17,25 @@ More help on commands or subcommands using 'help' as the next parameter.
 For source code, see https://github.com/elokapina/bubo
 """
 
-HELP_BREAKOUT = """Creates a breakout room. Usage:
+HELP_BREAKOUT = """Creates a breakout room. The user who requested the breakout room creation will
+automatically be invited to the room and made admin. The room will be created
+as non-public and non-encrypted.
+
+Other users can react to the breakout room creation response with any emoji reaction to
+get an invite to the room.
+
+Syntax:
 
     breakout TOPIC
-                    
+    
 For example:
 
-    breakout Bot's are cool
+    breakout How awesome is Bubo?
+    
+Any remaining text after `breakout` will be used as the room name.
 
-Any remaining text after the `breakout` command will be used as the name of the room. The user requesting the 
-breakout room will be automatically invited to the new room and made admin.
-Other users can react to the bot response message with any emoji reaction to
-get invited to the room.
+Note that while Bubo will stay in the breakout room itself, it will not maintain
+it in any way like the rooms created using the `rooms` command.
 """
 
 HELP_GROUPINVITE = """Invite a user to a predefined group of rooms.
@@ -37,7 +44,7 @@ Syntax:
 
     groupinvite @user1:domain.tld groupname [subgroups]
 
-Where "groupname" should be replaced with the group to join to. Additionally
+Where "groupname" should be replaced with the group to join to. Additionally,
 subgroups can be given as well.
 
 Groups must be configured to the Bubo configuration file by an administrator.
@@ -56,7 +63,7 @@ Examples:
 
 * Invite yourself to a room:
 
-  `invite #room:example.com
+  `invite #room:example.com`
                    
 * Invite one or more users to a room:
                    
@@ -164,21 +171,21 @@ Subcommands:
 HELP_ROOMS = HELP_ROOMS_AND_SPACES.replace("%%TYPES%%", "rooms").replace("%%TYPE%%", "room")
 HELP_SPACES = HELP_ROOMS_AND_SPACES.replace("%%TYPES%%", "spaces").replace("%%TYPE%%", "space")
 
-HELP_ROOMS_ALIAS = """Manage room aliases.
+HELP_ROOMS_ALIAS = """Manage room or space aliases.
 
-Allows adding and removing aliases, and setting the main (canonical) alias of a room.
+Allows adding and removing aliases, and setting the main (canonical) alias of a room or space.
 
 Format:
 
-    rooms alias !roomidoralias:domain.tld subcommand #alias:domain.tld
+    rooms/spaces alias !roomidoralias:domain.tld subcommand #alias:domain.tld
     
 Where "subcommand" can be one of: "add", "remove", "main".
 
 Examples:
 
-    rooms alias !roomidoralias:domain.tld add #alias:domain.tld 
-    rooms alias !roomidoralias:domain.tld remove #alias:domain.tld 
-    rooms alias !roomidoralias:domain.tld main #alias:domain.tld
+    rooms/spaces alias !roomidoralias:domain.tld add #alias:domain.tld 
+    rooms/spaces alias !roomidoralias:domain.tld remove #alias:domain.tld 
+    rooms/spaces alias !roomidoralias:domain.tld main #alias:domain.tld
     
 Notes:
 
