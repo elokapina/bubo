@@ -253,6 +253,16 @@ Subcommands:
   an instance of [keycloak-signup](https://github.com/elokapina/keycloak-signup).
   The invitation will contain a one-time link valid for 7 days. Requires coordinator level permissions.
 
+##### `rooms`
+
+List the rooms of a user.
+
+Usage:
+
+    users rooms @user:domain.tld
+    
+Requires bot admin permissions. Bubo must also be a Synapse admin.
+
 ##### `signuplink`
 
   Create a self-service signup link with a chosen amount of maximum signups

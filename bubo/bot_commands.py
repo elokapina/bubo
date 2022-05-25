@@ -20,7 +20,7 @@ from bubo.rooms import (
     ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels, recreate_room,
     add_alias, remove_alias, set_canonical_alias,
 )
-from bubo.synapse_admin import make_room_admin, join_users
+from bubo.synapse_admin import make_room_admin, join_users, get_user_rooms
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
 from bubo.utils import get_users_for_access, with_ratelimit, ensure_room_id
 
@@ -823,6 +823,43 @@ class Command(object):
                     logger.debug("users invite - Invited user: %s", email)
                     texts.append(f"Successfully invited {email}!")
                 text = '\n'.join(texts)
+            elif self.args[0] == "rooms":
+                if not await self._ensure_admin():
+                    return
+                if not self.config.is_synapse_admin:
+                    return await send_text_to_room(
+                        self.client, self.room.room_id,
+                        "Bubo must be Synapse admin to use this command. Please contact your system administrator",
+                    )
+                if len(self.args) < 2 or self.args[1] == "help":
+                    return await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_USERS_ROOMS)
+
+                user_id = self.args[1]
+                try:
+                    check_user_id(user_id)
+                except ValueError:
+                    await send_text_to_room(
+                        self.client,
+                        self.room.room_id,
+                        f"Invalid user mxid: {user_id}",
+                    )
+                rooms = await get_user_rooms(self.config, user_id)
+                if not rooms:
+                    return await send_text_to_room(
+                        self.client, self.room.room_id,
+                        f"Cannot find {user_id} in any rooms on this server.",
+                    )
+                else:
+                    room_list = []
+                    for room in rooms:
+                        room_str = f"{room.get('name')} ({room.get('canonical_alias')})" \
+                            if room.get("canonical_alias") else \
+                            f"{room.get('name')} ({room.get('room_id')})"
+                        room_list.append(room_str)
+                    return await send_text_to_room(
+                        self.client, self.room.room_id,
+                        f"User {user_id} found in the following rooms:\n\n{'<br>'.join(room_list)}"
+                    )
             elif self.args[0] == "signuplink":
                 if not await self._ensure_coordinator():
                     return

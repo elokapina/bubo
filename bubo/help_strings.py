@@ -244,7 +244,15 @@ HELP_USERS = """List or manage users.
 
 Without any subcommands, lists users. Other subcommands:
 
-* `create` - Create one or more users.
+* `create` - Create one or more Keycloak users.
+
+* `list` - Lists users in Keycloak.
+
+* `invite` - Send a a Keycloak Signup invitation link to a user.
+
+* `rooms` - List rooms of a Matrix user.
+
+* `signuplink` - Create a signup link with Keycloak Signup.
 
 For help on subcommands, give the subcommand with a "help" parameter.
 """
@@ -265,6 +273,15 @@ HELP_USERS_KEYCLOAK_DISABLED = "The users command is not configured on this inst
 
 HELP_USERS_KEYCLOAK_SIGNUP_DISABLED = "The users invite and signup link commands are not configured " \
                                       "on this instance, sorry."
+
+HELP_USERS_ROOMS = """List the rooms of a user.
+
+Usage:
+
+    users rooms @user:domain.tld
+    
+Requires bot admin permissions. Bubo must also be a Synapse admin.
+"""
 
 HELP_USERS_SIGNUPLINK = """Create a self-service signup link to send to new users.
 

@@ -15,6 +15,23 @@ API_PREFIX_V1 = "/_synapse/admin/v1"
 API_PREFIX_V2 = "/_synapse/admin/v2"
 
 
+async def get_room(config: Config, session: aiohttp.ClientSession, room_id: str) -> Optional[Dict]:
+    headers = get_request_headers(config)
+    async with session.get(
+        f"{config.homeserver_url}{API_PREFIX_V1}/rooms/{room_id}",
+        headers=headers,
+    ) as response:
+        if response.status == 429:
+            await asyncio.sleep(1)
+            return await get_room(config, session, room_id)
+        try:
+            response.raise_for_status()
+            return await response.json()
+        except Exception as ex:
+            logger.warning("Failed to get room %s: %s", room_id, ex)
+            return
+
+
 async def get_temporary_user_token(
     config: Config, session: aiohttp.ClientSession, headers: Dict, user: str,
 ) -> Optional[str]:
@@ -35,6 +52,34 @@ async def get_temporary_user_token(
         except Exception as ex:
             logger.warning("Failed to get temporary access token for user %s: %s", user, ex)
             return
+
+
+async def get_user_rooms(config: Config, user_id: str) -> List:
+    headers = get_request_headers(config)
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            f"{config.homeserver_url}{API_PREFIX_V1}/users/{user_id}/joined_rooms",
+            headers=headers,
+        ) as response:
+            if response.status == 429:
+                await asyncio.sleep(1)
+                return await get_user_rooms(config, user_id)
+            try:
+                response.raise_for_status()
+                data = await response.json()
+            except Exception as ex:
+                logger.warning("Failed to get user rooms for user %s: %s", user_id, ex)
+                return []
+        rooms = []
+        for room_id in data.get("joined_rooms", []):
+            room = await get_room(config, session, room_id)
+            if room:
+                rooms.append(room)
+            else:
+                rooms.append({
+                    "room_id": room_id,
+                })
+        return rooms
 
 
 async def get_temporary_user_tokens(config: Config, users: List[str]) -> Dict:

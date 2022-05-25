@@ -21,6 +21,9 @@
 * Add `groupinvite` command, which allows inviting a user to a group
   of rooms. Room groups are preconfigured in the config file.
 
+* Add `users` subcommand `rooms`. Lists users rooms on the server Bubo is installed on.
+  Requires Bubo being Synapse admin and also requires Bubo admin permissions.
+
 ### Changed
 
 * Allow removing room encryption by recreating with `rooms recreate-unencrypted` command.
