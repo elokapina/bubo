@@ -3,15 +3,32 @@ HELP_HELP = """Hello, I'm Bubo, a bot made with matrix-nio!
 Available commands:
 
 * breakout - Create a breakout room
-* communities - List and manage communities
+* groupinvite - Invite a pre-defined group to a room
+* groupjoin - Join a pre-defined group to a room
 * invite - Invite one or more users to a room
+* join - Join a user to a room
 * power - Set power levels in rooms
 * rooms - List and manage rooms
+* spaces - List and manage spaces
 * users - List and manage users and signup links
                    
 More help on commands or subcommands using 'help' as the next parameter.
                    
 For source code, see https://github.com/elokapina/bubo
+"""
+
+HELP_BREAKOUT = """Creates a breakout room. Usage:
+
+    breakout TOPIC
+                    
+For example:
+
+    breakout Bot's are cool
+
+Any remaining text after the `breakout` command will be used as the name of the room. The user requesting the 
+breakout room will be automatically invited to the new room and made admin.
+Other users can react to the bot response message with any emoji reaction to
+get invited to the room.
 """
 
 HELP_GROUPINVITE = """Invite a user to a predefined group of rooms.
@@ -62,11 +79,40 @@ Otherwise, a normal onvitation is used.
 This command requires coordinator level permissions.
 """
 
+HELP_POWER = """Set power level in a room. Usage:
+
+`power <user> <room> [<level>]`
+
+* `user` is the user ID, example `@user:example.tld`
+* `room` is a room alias or ID, example `#room:example.tld`. Bot must have power to give power there.
+* `level` is optional and defaults to `moderator`.
+
+Moderator rights can be given by coordinator level users. To give admin in a room, user must be admin of the bot.
+"""
+
 HELP_ROOMS_AND_SPACES = """Maintains %%TYPES%%.
 
 When given without parameters, Bubo will tell you about the %%TYPES%% it maintains.
 
 Subcommands:
+
+* `alias`
+
+  Add, remove or set main canonical alias for a %%TYPE%%.
+  
+  Examples:
+  
+  To add an alias to a %%TYPE%%:
+  
+  `%%TYPES%% alias !roomidoralias:domain.tld add #alias:domain.tld`
+  
+  To make an alias the main canonical alias for a %%TYPE%% (the alias must exist):
+  
+  `%%TYPES%% alias !roomidoralias:domain.tld main #alias:domain.tld`
+  
+  To remove an alias from a %%TYPE%%:
+  
+  `%%TYPES%% alias !roomidoralias:domain.tld remove #alias:domain.tld`
 
 * `create`
 
@@ -79,6 +125,19 @@ Subcommands:
   `%%TYPES%% create "My awesome room" epic-room "The best room ever!" yes no`
     
   Note, ALIAS should only contain lower case ascii characters and dashes. ENCRYPTED and PUBLIC are either 'yes' or 'no'.
+
+* `link`
+
+  Add a %%TYPE%% to the Bubo database to start tracking it. Will try to join the %%TYPE%% if not a member.
+  The %%TYPE%% must have an alias. Usage:
+  
+  `link #room-alias:domain.tld`
+  
+* `link-and-admin`
+
+  Same as link but will force join through a local user and make Bubo an admin if configured as Synapse admin. Usage:
+  
+  `link-and-admin #room-alias:domain.tld`  
 
 * `list`
 

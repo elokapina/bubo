@@ -29,17 +29,6 @@ logger = logging.getLogger(__name__)
 
 TEXT_PERMISSION_DENIED = "I'm afraid I cannot let you do that."
 
-HELP_POWER = """Set power level in a room. Usage:
-
-`power <user> <room> [<level>]`
-
-* `user` is the user ID, example `@user:example.tld`
-* `room` is a room alias or ID, example `#room:example.tld`. Bot must have power to give power there.
-* `level` is optional and defaults to `moderator`.
-
-Moderator rights can be given by coordinator level users. To give admin in a room, user must be admin of the bot.
-"""
-
 
 class Command(object):
     def __init__(self, client, store, config, command, room, event):
@@ -183,21 +172,8 @@ class Command(object):
 
     async def _breakout(self):
         """Create a breakout room"""
-        help_text = "Creates a breakout room. Usage:\n" \
-                    "\n" \
-                    "breakout TOPIC\n" \
-                    "\n" \
-                    "For example:\n" \
-                    "\n" \
-                    "breakout Bot's are cool\n" \
-                    "\n" \
-                    "Any remaining text after the `breakout` command will be used as the name of the room. " \
-                    "The user requesting the breakout room will be automatically invited to the new room " \
-                    "and made admin. " \
-                    "Other users can react to the bot response message with any emoji reaction to " \
-                    "get invited to the room."
         if not self.args or self.args[0] == "help":
-            await send_text_to_room(self.client, self.room.room_id, help_text)
+            await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_BREAKOUT)
         elif self.args:
             name = ' '.join(self.args)
             logger.debug(f"Breakout room name: '{name}'")
@@ -442,7 +418,7 @@ class Command(object):
             return
 
         if not self.args or self.args[0] == "help":
-            text = HELP_POWER
+            text = help_strings.HELP_POWER
         else:
             try:
                 user_id = self.args[0]
@@ -453,7 +429,7 @@ class Command(object):
             except AttributeError:
                 text = f"Could not resolve room ID. Please ensure room exists."
             except IndexError:
-                text = f"Cannot understand arguments.\n\n{HELP_POWER}"
+                text = f"Cannot understand arguments.\n\n{help_strings.HELP_POWER}"
             else:
                 try:
                     level = self.args[2]
