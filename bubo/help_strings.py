@@ -209,7 +209,7 @@ This action cannot be reversed so care should be taken.
 """
 
 HELP_ROOMS_RECREATE_CONFIRM = """Please confirm room re-create with the command `%srooms recreate confirm`.
-You have 60s to confirm before this request expires.
+You have 300s to confirm before this request expires.
 
 **This is destructive, the room will be replaced. This cannot be reversed!**
 """
