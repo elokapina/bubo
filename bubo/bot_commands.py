@@ -2,7 +2,7 @@ import csv
 import logging
 import re
 import time
-
+from pindora_api import create_new_key, create_permanent_key
 from email_validator import validate_email, EmailNotValidError
 # noinspection PyPackageRequirements
 from nio import RoomPutStateError, RoomGetStateEventError, RoomPutStateResponse, ProtocolError
@@ -97,6 +97,8 @@ class Command(object):
             await self._rooms(space=True)
         elif self.command.startswith("users"):
             await self._users()
+        elif self.command.startswith("keys"):
+            await self._keys()
         else:
             await self._unknown_command()
 
@@ -609,3 +611,8 @@ class Command(object):
         if not text:
             text = help_strings.HELP_USERS
         await send_text_to_room(self.client, self.room.room_id, text)
+    async def _keys(self):
+        subcommand = self.args[0]
+        if subcommand == "create":
+            if self.args[1]:
+                create_new_key(self.config.pindora, self.args[])
