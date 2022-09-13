@@ -140,7 +140,8 @@ For example `users signupslink 50 7` would create a link for a maximum of 50 sig
 of 7 days.
 """
 HELP_KEYS = """
-Usage:
-`keys create temp <month> <day> <start_time(in format xx:xx)> <end_time(in format xx:xx)>
-
+Create temporary key:
+`keys create temp <month> <day> <start_time(in format xx:xx)> <end_time(in format xx:xx)>`
+Create permanent key:
+`keys create permanent`
 """
