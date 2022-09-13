@@ -614,10 +614,12 @@ class Command(object):
     async def _keys(self):
         subcommand = self.args[0]
         if subcommand == "create":
-            if not self.args[1]:
+            if self.args[1] == "permanent":
+                key = create_permanent_key(self.config.pindora)
+                await send_text_to_room(self.client, self.room.room_id, f"Your permanent code is {key}")
+            elif self.args[2] == "temp":
                 key = create_new_key(self.config.pindora, self.args[2], self.args[3], self.args[4], self.args[5], self.args[6])
                 await send_text_to_room(self.client, self.room.room_id, f"Your code is {key}")
-            else:
-                if self.args[1] == "permanent":
-                    key = create_permanent_key(self.config.pindora)
-                    await send_text_to_room(self.client, self.room.room_id, f"Your permanent code is {key}")
+        else:
+            await send_text_to_room(self.client, self.room.room_id, "Something went wrong")
+        
