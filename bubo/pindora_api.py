@@ -1,6 +1,6 @@
 import requests
 import json
-def create_new_key(pindora, start_time_month, start_time_day, start_time_end, end_time_month, end_time_day, end_time_end, timezone):
+def create_new_key(pindora, month, day, start_time, end_time, timezone):
     url = "https://admin.pindora.fi/api/integration/pins"
 
     payload = json.dumps({
@@ -9,8 +9,8 @@ def create_new_key(pindora, start_time_month, start_time_day, start_time_end, en
         "pindora": {
             "id": f"{pindora}"
         },
-        "date_from": f"2022-{start_time_month}-{start_time_day}T{start_time_end}:00+{timezone}:00",
-        "date_to": f"2022-{end_time_month}-{end_time_day}T{end_time_end}:00+{timezone}:00"
+        "date_from": f"2022-{month}-{day}T{start_time}:00+{timezone}:00",
+        "date_to": f"2022-{month}-{day}T{end_time}:00+{timezone}:00"
         }
     ],
     "magic_enabled": True
