@@ -621,5 +621,5 @@ class Command(object):
                 key = create_new_key(self.config.pindora_id, self.args[2], self.args[3], self.args[4], self.args[5], self.args[6])
                 await send_text_to_room(self.client, self.room.room_id, f"Your code is {key}")
         else:
-            await send_text_to_room(self.client, self.room.room_id, "Something went wrong")
+            await send_text_to_room(self.client, self.room.room_id, help_string.HELP_KEYS)
         

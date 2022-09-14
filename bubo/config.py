@@ -121,6 +121,11 @@ class Config(object):
         if self.email and self.email.get("starttls") and self.email.get("ssl"):
             raise ConfigError("Cannot enable both starttls and ssl for email")
 
+        # Pindora
+        self.pindora = self._get_cfg(["pindora"], default={}, required=False)
+        self.pindora_enabled = self._get_cfg(["pindora", "enabled"], default=False, required=False)
+        self.pindora_token = self._get_cfg(["pindora", "token"], required=False)
+        
     def _get_cfg(
             self,
             path: List[str],

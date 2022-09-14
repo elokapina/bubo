@@ -1,5 +1,12 @@
 import requests
 import json
+from config import Config
+def get_headers():
+    headers = {
+        'Pindora-Api-Key': f'{Config.pindora_token}',
+        'Content-Type': 'application/json'
+        }
+    return headers
 def create_new_key(pindora, month, day, start_time, end_time, timezone):
     url = "https://admin.pindora.fi/api/integration/pins"
 
@@ -15,16 +22,13 @@ def create_new_key(pindora, month, day, start_time, end_time, timezone):
     ],
     "magic_enabled": True
     })
-    headers = {
-    'Authorization': f'Bearer {token}',
-    'Content-Type': 'application/json'
-    }
+    
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.request("POST", url, headers=get_headers(), data=payload)
     if "code" in response.json():
         return response.json()["code"]
     else:
-        return "000000"
+        return "null"
 def create_permanent_key(pindora):
     url = "https://admin.pindora.fi/api/integration/pins"
 
@@ -37,13 +41,9 @@ def create_permanent_key(pindora):
     ],
     "magic_enabled": True
     })
-    headers = {
-    'Authorization': f'Bearer {token}',
-    'Content-Type': 'application/json'
-    }
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.request("POST", url, headers=get_headers(), data=payload)
     if "code" in response.json():
         return response.json()["code"]
     else:
-        return "000000"
+        return "null"

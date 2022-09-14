@@ -137,7 +137,10 @@ email:
   auth:
     username: janet
     password: foobar
-
+# Pindora smart lock API configuration
+pindora:
+  enabled: false
+  token: d217d336-550g-4dd3-b834-b7deb95b7607
 # Storage related configuration
 storage:
   # The path to the database
