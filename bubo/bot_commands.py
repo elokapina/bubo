@@ -2,7 +2,7 @@ import csv
 import logging
 import re
 import time
-from pindora_api import create_new_key, create_permanent_key
+
 from email_validator import validate_email, EmailNotValidError
 # noinspection PyPackageRequirements
 from nio import RoomPutStateError, RoomGetStateEventError, RoomPutStateResponse, ProtocolError
@@ -15,6 +15,7 @@ from bubo.communities import ensure_community_exists
 from bubo.rooms import ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels, recreate_room
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
 from bubo.utils import get_users_for_access, with_ratelimit, ensure_room_id
+from bubo.pindora_api import create_new_key, create_permanent_key
 
 logger = logging.getLogger(__name__)
 

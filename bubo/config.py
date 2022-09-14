@@ -100,7 +100,7 @@ class Config(object):
             if not re.match(re.compile(RoomRegex), admin) and not re.match(re.compile(UserIdRegex), admin):
                 raise ConfigError(f"Admin {admin} does not look like a user or room")
         self.coordinators = self._get_cfg(["permissions", "coordinators"], default=[])
-        for coordinator in self.admins:
+        for coordinator in self.admins: # TODO #16 looks like double checking one thing
             if not re.match(re.compile(RoomRegex), coordinator) and not re.match(re.compile(UserIdRegex), coordinator):
                 raise ConfigError(f"Coordinator {coordinator} does not look like a user or room")
         self.permissions_demote_users = self._get_cfg(["permissions", "demote_users"], default=False, required=False)
@@ -125,7 +125,7 @@ class Config(object):
         self.pindora = self._get_cfg(["pindora"], default={}, required=False)
         self.pindora_enabled = self._get_cfg(["pindora", "enabled"], default=False, required=False)
         self.pindora_token = self._get_cfg(["pindora", "token"], required=False)
-
+        self.pindora_id = self._get_cfg(["pindora", "id"], required=False)
     def _get_cfg(
             self,
             path: List[str],
