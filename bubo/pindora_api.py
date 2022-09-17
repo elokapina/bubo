@@ -2,6 +2,8 @@ import requests
 import json
 
 from bubo.config import Config
+
+
 def get_headers():
     headers = {
         'Pindora-Api-Key': f'{Config.pindora_token}',
