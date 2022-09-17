@@ -137,6 +137,7 @@ email:
   auth:
     username: janet
     password: foobar
+
 # Pindora smart lock API configuration
 pindora:
   enabled: false
