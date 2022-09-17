@@ -30,8 +30,7 @@ def create_new_key(pindora, month, day, start_time, end_time, timezone):
     response = requests.request("POST", url, headers=get_headers(), data=payload)
     if "code" in response.json():
         return response.json()["code"]
-    else:
-        return "null"
+
 def create_permanent_key(pindora):
     url = "https://admin.pindora.fi/api/integration/pins"
 
