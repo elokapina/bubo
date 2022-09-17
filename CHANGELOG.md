@@ -17,6 +17,8 @@
   hopefully mitigate race conditions where Bubo is starting up and hasn't yet
   determined the state of the room.
 
+* Fixed incorrect check for invalid coordinator room / user ID's when loading config ([#17](https://github.com/elokapina/bubo/pull/17)).
+
 ## v0.3.0 - 2022-01-23
 
 ### Added
