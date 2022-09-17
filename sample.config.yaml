@@ -140,8 +140,8 @@ email:
 # Pindora smart lock API configuration
 pindora:
   enabled: false
-  token: d217d336-550g-4dd3-b834-b7deb95b7607
-  id: 66c1b208-7b31-4747-a331-fc9753634104
+  token: secrettoken
+  id: pindoraid
 # Storage related configuration
 storage:
   # The path to the database
