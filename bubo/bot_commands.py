@@ -612,6 +612,7 @@ class Command(object):
         if not text:
             text = help_strings.HELP_USERS
         await send_text_to_room(self.client, self.room.room_id, text)
+        
     async def _keys(self):
         subcommand = self.args[0]
         if subcommand == "create":
