@@ -33,13 +33,12 @@ def create_permanent_key(pindora):
     url = "https://admin.pindora.fi/api/integration/pins"
 
     payload = json.dumps({
-    "validity_rules": [
-        {
-        "pindora": {
-            "id": f"{pindora}"
-        }}
-    ],
-    "magic_enabled": True
+        "validity_rules": [{
+            "pindora": {
+                "id": f"{pindora}",
+            },
+        }],
+        "magic_enabled": True,
     })
 
     response = requests.request("POST", url, headers=get_headers(), data=payload)
