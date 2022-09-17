@@ -614,14 +614,17 @@ class Command(object):
         await send_text_to_room(self.client, self.room.room_id, text)
         
     async def _keys(self):
-        subcommand = self.args[0]
-        if subcommand == "create":
-            if self.args[1] == "permanent":
-                key = create_permanent_key(self.config.pindora_id)
-                await send_text_to_room(self.client, self.room.room_id, f"Your permanent code is {key}")
-            elif self.args[2] == "temp":
-                key = create_new_key(self.config.pindora_id, self.args[2], self.args[3], self.args[4], self.args[5], self.args[6])
-                await send_text_to_room(self.client, self.room.room_id, f"Your code is {key}")
-        else:
-            await send_text_to_room(self.client, self.room.room_id, help_string.HELP_KEYS)
+        if self.args:
+            subcommand = self.args[0]
+            if subcommand == "create":
+                if len(self.args) > 1
+                    if self.args[1] == "permanent":
+                        key = create_permanent_key(self.config.pindora_id, self.config)
+                        await send_text_to_room(self.client, self.room.room_id, f"Your permanent code is {key}")
+                if len(self.args) > 5
+                    if self.args[1] == "temporary":
+                        key = create_new_key(self.config.pindora_id, self.args[2], self.args[3], self.args[4], self.args[5], self.args[6], self.args[7], self.config)
+                        await send_text_to_room(self.client, self.room.room_id, f"Your code is {key}")
+            else:
+                await send_text_to_room(self.client, self.room.room_id, help_string.HELP_KEYS)
         

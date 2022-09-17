@@ -1,10 +1,7 @@
 import requests
 import json
 
-from bubo.config import Config
-
-
-def get_headers():
+def get_headers(Config):
     headers = {
         'Pindora-Api-Key': f'{Config.pindora_token}',
         'Content-Type': 'application/json'
@@ -12,7 +9,7 @@ def get_headers():
     return headers
 
 
-def create_new_key(pindora, month, day, start_time, end_time, timezone):
+def create_new_key(pindora, year, month, day, start_time, end_time, timezone, Config):
     url = "https://admin.pindora.fi/api/integration/pins"
 
     payload = json.dumps({
@@ -20,18 +17,18 @@ def create_new_key(pindora, month, day, start_time, end_time, timezone):
             "pindora": {
                 "id": f"{pindora}",
             },
-            "date_from": f"2022-{month}-{day}T{start_time}:00+{timezone}:00",
-            "date_to": f"2022-{month}-{day}T{end_time}:00+{timezone}:00",
+            "date_from": f"{year}-{month}-{day}T{start_time}:00+{timezone}:00",
+            "date_to": f"{year}-{month}-{day}T{end_time}:00+{timezone}:00",
         }],
         "magic_enabled": True,
     })
     
 
-    response = requests.request("POST", url, headers=get_headers(), data=payload)
+    response = requests.request("POST", url, headers=get_headers(Config), data=payload)
     if "code" in response.json():
         return response.json()["code"]
 
-def create_permanent_key(pindora):
+def create_permanent_key(pindora, Config):
     url = "https://admin.pindora.fi/api/integration/pins"
 
     payload = json.dumps({
@@ -43,7 +40,7 @@ def create_permanent_key(pindora):
         "magic_enabled": True,
     })
 
-    response = requests.request("POST", url, headers=get_headers(), data=payload)
+    response = requests.request("POST", url, headers=get_headers(Config), data=payload)
     if "code" in response.json():
         return response.json()["code"]
     else:

@@ -141,7 +141,7 @@ of 7 days.
 """
 HELP_KEYS = """
 Create temporary key:
-`keys create temp <month> <day> <start_time(in format xx:xx)> <end_time(in format xx:xx)>`
+`keys create temporary <year> <month> <day> <start_time(in format xx:xx)> <end_time(in format xx:xx)>`
 Create permanent key:
 `keys create permanent`
 """
