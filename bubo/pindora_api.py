@@ -10,6 +10,8 @@ def get_headers():
         'Content-Type': 'application/json'
         }
     return headers
+
+
 def create_new_key(pindora, month, day, start_time, end_time, timezone):
     url = "https://admin.pindora.fi/api/integration/pins"
 
