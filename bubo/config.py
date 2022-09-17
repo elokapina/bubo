@@ -100,7 +100,7 @@ class Config(object):
             if not re.match(re.compile(RoomRegex), admin) and not re.match(re.compile(UserIdRegex), admin):
                 raise ConfigError(f"Admin {admin} does not look like a user or room")
         self.coordinators = self._get_cfg(["permissions", "coordinators"], default=[])
-        for coordinator in self.admins:
+        for coordinator in self.coordinators:
             if not re.match(re.compile(RoomRegex), coordinator) and not re.match(re.compile(UserIdRegex), coordinator):
                 raise ConfigError(f"Coordinator {coordinator} does not look like a user or room")
         self.permissions_demote_users = self._get_cfg(["permissions", "demote_users"], default=False, required=False)
