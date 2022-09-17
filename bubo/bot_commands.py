@@ -119,6 +119,7 @@ class Command(object):
             try:
                 await add_alias(room_alias_or_id=room_alias_or_id, alias=alias, client=self.client)
             except Exception as ex:
+                # TODO this doesn't seem to fire. the error code is 409 but no expection is raised
                 await send_text_to_room(
                     self.client,
                     self.room.room_id,

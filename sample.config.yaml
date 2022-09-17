@@ -198,6 +198,9 @@ discourse:
     prefixes:
       #abc: "#space-abc:domain.tld"
 
+    # If set to true, only those groups will be synced as spaces that have the above prefixes
+    sync_prefixes_only: false
+
     # Rooms to create
     # For templates, the following variables are available:
     # - Group display name: %groupdisplayname%
