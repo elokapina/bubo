@@ -7,7 +7,7 @@ from typing import Optional
 import aiohttp
 # noinspection PyPackageRequirements
 from nio import (
-    SendRetryError, RoomInviteError, AsyncClient, ErrorResponse, RoomSendResponse,
+    SendRetryError, RoomInviteError, AsyncClient, ErrorResponse, RoomSendResponse, ProfileGetResponse,
 )
 from markdown import markdown
 
@@ -19,8 +19,21 @@ logger = logging.getLogger(__name__)
 
 async def invite_to_room(
     client: AsyncClient, room_id: str, user_id: str, command_room_id: str = None, room_alias: str = None,
+    ignore_in_room: bool = False,
 ):
-    """Invite a user to a room"""
+    """
+    Invite a user to a room.
+
+    First checks that the user exists.
+    """
+    user = await client.get_profile(user_id)
+    if not isinstance(user, ProfileGetResponse):
+        await send_text_to_room(
+            client,
+            command_room_id,
+            f"Could not find {user_id} to invite",
+        )
+        return
     response = await client.room_invite(room_id, user_id)
     if isinstance(response, RoomInviteError):
         if response.status_code == "M_LIMIT_EXCEEDED":
@@ -28,6 +41,13 @@ async def invite_to_room(
             await invite_to_room(client, room_id, user_id, command_room_id, room_alias)
             return
         if command_room_id:
+            if ignore_in_room and response.message.find("is already in the room") > -1:
+                await send_text_to_room(
+                    client,
+                    command_room_id,
+                    f"{user_id} already in room {room_alias or room_id}",
+                )
+                return
             await send_text_to_room(
                 client,
                 command_room_id,

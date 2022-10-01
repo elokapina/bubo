@@ -7,6 +7,29 @@
 * Add `spaces` command. Mirrors `rooms` command for subcommands and functionality, with the 
   exception that the created room will be of type Space.
 
+* Added rooms `link` and `link-and-admin` subcommands. Both variants make Bubo attempt
+  to join the room and store the room in the database to start tracking it. If Bubo
+  is Synapse admin and/or admin permissions is requested, it will also try to join and/or
+  make itself admin using the Synapse admin API.
+
+* Add `rooms` subcommand `alias`. Allows maintaining aliases for rooms, including
+  adding, removing and setting the main alias.
+
+* Add `join` command, which allows (Synapse admin) force joining users to rooms or as 
+  a fallback inviting users to rooms.
+
+* Add `groupinvite` command, which allows inviting a user to a group
+  of rooms. Room groups are preconfigured in the config file.
+
+* Add `users` subcommand `rooms`. Lists users rooms on the server Bubo is installed on.
+  Requires Bubo being Synapse admin and also requires Bubo admin permissions.
+
+### Changed
+
+* Allow removing room encryption by recreating with `rooms recreate-unencrypted` command.
+
+* The `invite` command will now check the user exists before sending an invitation.
+
 ### Fixed
 
 * Force `charset_normalizer` dependency logs to `warning` level to avoid spammy info
@@ -18,6 +41,17 @@
   determined the state of the room.
 
 * Fixed incorrect check for invalid coordinator room / user ID's when loading config ([#17](https://github.com/elokapina/bubo/pull/17)).
+
+* Fixed rare bug that caused Bubo to suddenly start to react to all messages in non-DM 
+  rooms even when command prefix was not used ([#17](https://github.com/elokapina/bubo/issues/18)).
+
+### Removed
+
+* Removed any attempts to maintain room encryption for old rooms on startup. This code
+  seems to have been broken and seems like a footgun waiting to happen. It should
+  be replaced with a manual "encrypt room" command if needed.
+
+* Removed the `communities` command. Existing configured communities will not be tracked.
 
 ## v0.3.0 - 2022-01-23
 

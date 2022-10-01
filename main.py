@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import logging
-import sys
 from time import sleep
 
 import aiolog
@@ -14,19 +13,18 @@ from aiohttp import (
 from nio import (
     AsyncClient,
     AsyncClientConfig,
-    ForwardedRoomKeyEvent, 
+    ForwardedRoomKeyEvent,
     InviteMemberEvent,
     LocalProtocolError,
     LoginError,
     MegolmEvent,
     RoomKeyEvent,
     RoomMessageText,
-    UnknownEvent, 
+    UnknownEvent,
 )
 
 from bubo.callbacks import Callbacks
-from bubo.communities import maintain_configured_communities
-from bubo.config import Config
+from bubo.config import Config, load_config
 from bubo.rooms import maintain_configured_rooms
 from bubo.storage import Storage
 
@@ -108,9 +106,6 @@ async def main(config: Config):
             # Maintain rooms
             await maintain_configured_rooms(client, store, config)
 
-            # Maintain communities
-            await maintain_configured_communities(store, config)
-
             logger.info(f"Logged in as {config.user_id}")
             await client.sync_forever(timeout=30000, full_state=True)
 
@@ -123,13 +118,8 @@ async def main(config: Config):
             # Make sure to close the client connection on disconnect
             await client.close()
 
-# Read config file
-# A different config file path can be specified as the first command line argument
-if len(sys.argv) > 1:
-    config_filepath = sys.argv[1]
-else:
-    config_filepath = "config.yaml"
-config_file = Config(config_filepath)
+
+config_file = load_config()
 
 aiolog.start()
 

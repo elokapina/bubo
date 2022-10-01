@@ -2,34 +2,31 @@ import csv
 import logging
 import re
 import time
+from typing import List, Union, Dict, Tuple
 
 from email_validator import validate_email, EmailNotValidError
 # noinspection PyPackageRequirements
-from nio import RoomPutStateError, RoomGetStateEventError, RoomPutStateResponse, ProtocolError
+from nio import (
+    RoomPutStateError, RoomGetStateEventError, RoomPutStateResponse, ProtocolError, JoinedRoomsError,
+    JoinError, RoomGetStateEventResponse, RoomInviteError,
+)
 # noinspection PyPackageRequirements
 from nio.schemas import check_user_id
 
 from bubo import help_strings
 from bubo.chat_functions import send_text_to_room, invite_to_room
-from bubo.communities import ensure_community_exists
-from bubo.rooms import ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels, recreate_room
+from bubo.discourse import Discourse
+from bubo.rooms import (
+    ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels, recreate_room,
+    add_alias, remove_alias, set_canonical_alias,
+)
+from bubo.synapse_admin import make_room_admin, join_users, get_user_rooms
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
 from bubo.utils import get_users_for_access, with_ratelimit, ensure_room_id
 
 logger = logging.getLogger(__name__)
 
 TEXT_PERMISSION_DENIED = "I'm afraid I cannot let you do that."
-
-HELP_POWER = """Set power level in a room. Usage:
-
-`power <user> <room> [<level>]`
-
-* `user` is the user ID, example `@user:example.tld`
-* `room` is a room alias or ID, example `#room:example.tld`. Bot must have power to give power there.
-* `level` is optional and defaults to `moderator`.
-
-Moderator rights can be given by coordinator level users. To give admin in a room, user must be admin of the bot.
-"""
 
 
 class Command(object):
@@ -83,12 +80,18 @@ class Command(object):
         """Process the command"""
         if self.command.startswith("breakout"):
             await self._breakout()
-        elif self.command.startswith("communities"):
-            await self._communities()
+        elif self.command.startswith("discourse"):
+            await self._discourse()
+        elif self.command.startswith("groupinvite"):
+            await self._groupinvite()
+        elif self.command.startswith("groupjoin"):
+            await self._groupinvite()
         elif self.command.startswith("help"):
             await self._show_help()
         elif self.command.startswith("invite"):
             await self._invite()
+        elif self.command.startswith("join"):
+            await self._join()
         elif self.command.startswith("power"):
             await self._power()
         elif self.command.startswith("rooms"):
@@ -100,23 +103,75 @@ class Command(object):
         else:
             await self._unknown_command()
 
+    async def _alias(self):
+        """
+        Maintain room aliases.
+        """
+        if len(self.args) < 4:
+            await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_ROOMS_ALIAS)
+            return
+
+        room_alias_or_id = self.args[1]
+        subcommand = self.args[2]
+        alias = self.args[3]
+
+        if subcommand == "add":
+            try:
+                await add_alias(room_alias_or_id=room_alias_or_id, alias=alias, client=self.client)
+            except Exception as ex:
+                # TODO this doesn't seem to fire. the error code is 409 but no expection is raised
+                await send_text_to_room(
+                    self.client,
+                    self.room.room_id,
+                    f"Failed to add alias to room {room_alias_or_id}: {ex}"
+                )
+            else:
+                await send_text_to_room(
+                    self.client,
+                    self.room.room_id,
+                    f"Alias {alias} added to {room_alias_or_id}"
+                )
+            return
+        elif subcommand == "remove":
+            try:
+                await remove_alias(room_alias_or_id=room_alias_or_id, alias=alias, client=self.client)
+            except Exception as ex:
+                await send_text_to_room(
+                    self.client,
+                    self.room.room_id,
+                    f"Failed to remove alias from room {room_alias_or_id}: {ex}"
+                )
+            else:
+                await send_text_to_room(
+                    self.client,
+                    self.room.room_id,
+                    f"Alias {alias} removed from {room_alias_or_id}"
+                )
+            return
+        elif subcommand == "main":
+            try:
+                await set_canonical_alias(
+                    room_alias_or_id=room_alias_or_id, alias=alias, client=self.client, store=self.store,
+                    config=self.config,
+                )
+            except Exception as ex:
+                await send_text_to_room(
+                    self.client,
+                    self.room.room_id,
+                    f"Failed to set main alias for room {room_alias_or_id}: {ex}"
+                )
+            else:
+                await send_text_to_room(
+                    self.client,
+                    self.room.room_id,
+                    f"Alias {alias} set as main alias for {room_alias_or_id}"
+                )
+            return
+
     async def _breakout(self):
         """Create a breakout room"""
-        help_text = "Creates a breakout room. Usage:\n" \
-                    "\n" \
-                    "breakout TOPIC\n" \
-                    "\n" \
-                    "For example:\n" \
-                    "\n" \
-                    "breakout Bot's are cool\n" \
-                    "\n" \
-                    "Any remaining text after the `breakout` command will be used as the name of the room. " \
-                    "The user requesting the breakout room will be automatically invited to the new room " \
-                    "and made admin. " \
-                    "Other users can react to the bot response message with any emoji reaction to " \
-                    "get invited to the room."
         if not self.args or self.args[0] == "help":
-            await send_text_to_room(self.client, self.room.room_id, help_text)
+            await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_BREAKOUT)
         elif self.args:
             name = ' '.join(self.args)
             logger.debug(f"Breakout room name: '{name}'")
@@ -135,65 +190,76 @@ class Command(object):
                        "but invites via reactions will not work.*"
                 await send_text_to_room(self.client, self.room.room_id, text)
 
-    async def _communities(self):
-        """List and operate on communities"""
+    async def _discourse(self):
+        """Discourse integration"""
+        if not await self._ensure_admin():
+            return
+
+        if not self.args or self.args[0] != "sync":
+            await send_text_to_room(self.client, self.room.room_id, "WIP, try 'sync'")
+            return
+
+        discourse = Discourse()
+        await discourse.sync_groups_as_spaces(self.client, self.store)
+
+    async def _groupinvite(self):
+        """
+        Invite user to a predefined group of rooms.
+        """
         if not await self._ensure_coordinator():
             return
-        if self.args:
-            if self.args[0] == "create":
-                # Create a community
-                # Figure out the actual parameters
-                args = self.args[1:]
-                params = csv.reader([' '.join(args)], delimiter=" ")
-                params = [param for param in params][0]
-                if len(params) != 3 or params[0] == "help":
-                    text = "NOTE! Communities support is deprecated and will be removed in Bubo v0.4.0.\n" \
-                           "\n" \
-                           "Wrong number of arguments. Usage:\n" \
-                           "\n" \
-                           "`communities create NAME ALIAS TITLE`\n" \
-                           "\n" \
-                           "For example:\n" \
-                           "\n" \
-                           "communities create \"My epic community\" epic-community \"The best community ever!\"\n" \
-                           "\n" \
-                           "Note, ALIAS should only contain lower case ascii characters and dashes (maybe)."
-                else:
-                    result, error = await ensure_community_exists(
-                        (None, params[0], params[1], params[2], None, None),
-                        self.config,
-                    )
-                    if result == "created":
-                        text = f"NOTE! Communities support is deprecated and will be removed in Bubo v0.4.0.\n" \
-                               f"\n" \
-                               f"Community {params[0]} (+{params[1]}:{self.config.server_name}) " \
-                               f"created successfully."
-                        self.store.store_community(params[0], params[1], params[2])
-                    elif result == "exists":
-                        text = f"NOTE! Communities support is deprecated and will be removed in Bubo v0.4.0.\n" \
-                               f"\n" \
-                               f"Sorry! Community {params[0]} (+{params[1]}:{self.config.server_name}) " \
-                               f"already exists."
-                    else:
-                        text = f"Error creating community: {error}"
-            else:
-                text = "Unknown subcommand!"
-        else:
-            text = "NOTE! Communities support is deprecated and will be removed in Bubo v0.4.0.\n" \
-                   "\n" \
-                   "I currently maintain the following communities:\n\n"
-            results = self.store.cursor.execute("""
-                select * from communities
-            """)
-            communities = []
-            dbresult = results.fetchall()
-            for community in dbresult:
-                communities.append(f"* {community[1]} / +{community[2]}:{self.config.server_name} / {community[3]}\n")
-            text += "".join(communities)
-        await send_text_to_room(self.client, self.room.room_id, text)
+
+        if len(self.args) < 2:
+            await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_GROUPINVITE)
+            return
+
+        user = self.args[0]
+        groups = self.args[1:]
+
+        async def _get_group_rooms(group: Union[List, Dict], remaining_groups: Tuple, room_list: List) -> List:
+            new_room_list = room_list[:]
+            if isinstance(group, dict):
+                new_room_list.extend(group.get("__all__", []))
+                if remaining_groups:
+                    next_group = group.get(remaining_groups[0])
+                    if not next_group:
+                        await send_text_to_room(
+                            self.client, self.room.room_id,
+                            f"Invalid group '{remaining_groups[0]}' or group has no rooms."
+                        )
+                        return []
+                    remaining_groups = remaining_groups[1:] if len(remaining_groups) > 1 else ()
+                    return await _get_group_rooms(next_group, remaining_groups, new_room_list)
+                return new_room_list
+            elif isinstance(group, list):
+                new_room_list.extend(group)
+            return new_room_list
+
+        first_group = self.config.rooms.get("groups", {}).get(groups[0])
+        if not first_group:
+            await send_text_to_room(
+                self.client, self.room.room_id,
+                f"Invalid group '{groups[0]}' or group has no rooms."
+            )
+            return
+        subgroups = groups[1:] if len(groups) > 1 else ()
+
+        initial_rooms = self.config.rooms.get("groups", {}).get("__all__", [])
+
+        rooms = await _get_group_rooms(first_group, subgroups, initial_rooms)
+        if not rooms:
+            await send_text_to_room(
+                self.client, self.room.room_id,
+                f"No rooms found for groups {' '.join(groups)}."
+            )
+            return
+
+        for room in rooms:
+            room_id = await ensure_room_id(client=self.client, room_id_or_alias=room)
+            await invite_to_room(self.client, room_id, user, self.room.room_id, ignore_in_room=True)
 
     async def _invite(self):
-        """Handle an invite command"""
+        """Handle an invitation command"""
         if not await self._ensure_coordinator():
             return
         if not self.args or self.args[0] == "help":
@@ -235,6 +301,48 @@ class Command(object):
                         await invite_to_room(self.client, room_id, user_id, self.room.room_id, self.args[0])
                 return
 
+    async def _join(self):
+        """
+        Join a user to a room.
+
+        If Bubo is not a Synapse admin, fall back to regular invite.
+        Either way, Bubo needs to be in the room.
+        """
+        if not await self._ensure_coordinator():
+            return
+
+        if len(self.args) < 2:
+            await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_JOIN)
+            return
+
+        room_id_or_alias = self.args[0]
+        users = self.args[1:]
+
+        await self._join_users_to_room(room_id_or_alias, users)
+
+    async def _join_users_to_room(self, room_id_or_alias: str, users: List[str]) -> None:
+        joined = 0
+        invited = 0
+
+        if self.config.is_synapse_admin:
+            joined = await join_users(self.config, users, room_id_or_alias)
+
+        room_id = await ensure_room_id(client=self.client, room_id_or_alias=room_id_or_alias)
+
+        if not self.config.is_synapse_admin or joined != len(users):
+            # Fallback invites
+            for user in users:
+                response = await self.client.room_invite(room_id, user)
+                if isinstance(response, RoomInviteError):
+                    logger.warning(f"Failed to invite user {user} to room {room_id}: "
+                                   f"{response.message} / {response.status_code}")
+                else:
+                    invited += 1
+        await send_text_to_room(
+            self.client, self.room.room_id,
+            f"Joined {joined} users and invited {invited} users to room {room_id}",
+        )
+
     async def _power(self):
         """Set power in a room.
 
@@ -251,7 +359,7 @@ class Command(object):
             return
 
         if not self.args or self.args[0] == "help":
-            text = HELP_POWER
+            text = help_strings.HELP_POWER
         else:
             try:
                 user_id = self.args[0]
@@ -262,7 +370,7 @@ class Command(object):
             except AttributeError:
                 text = f"Could not resolve room ID. Please ensure room exists."
             except IndexError:
-                text = f"Cannot understand arguments.\n\n{HELP_POWER}"
+                text = f"Cannot understand arguments.\n\n{help_strings.HELP_POWER}"
             else:
                 try:
                     level = self.args[2]
@@ -305,7 +413,9 @@ class Command(object):
         text = None
         type_text = 'Space' if space else 'Room'
         if self.args:
-            if self.args[0] == "create":
+            if self.args[0] == "alias":
+                await self._alias()
+            elif self.args[0] == "create":
                 # Create a room or space
                 # Figure out the actual parameters
                 args = self.args[1:]
@@ -316,29 +426,39 @@ class Command(object):
                     text = f"Wrong number or bad arguments. " \
                            f"Usage:\n\n{help_strings.HELP_SPACES if space else help_strings.HELP_ROOMS}"
                 else:
-                    result, error = await ensure_room_exists(
+                    result, room_id = await ensure_room_exists(
                         (None, params[0], params[1], None, params[2], None, True if params[3] == "yes" else False,
-                         True if params[4] == "yes" else False, "space" if space else ""),
+                         True if params[4] == "yes" else False, "space" if space else "room"),
                         self.client,
                         self.store,
                         self.config,
                     )
                     if result == "created":
                         text = f"{type_text} {params[0]} (#{params[1]}:{self.config.server_name}) " \
-                               f"created successfully."
+                               f"created successfully. Room ID: {room_id}"
                     elif result == "exists":
                         text = f"Sorry! {type_text} {params[0]} (#{params[1]}:{self.config.server_name}) " \
                                f"already exists."
                     else:
-                        text = f"Error creating {type_text}: {error}"
+                        text = f"Error creating {type_text}"
             elif self.args[0] == "help":
                 text = help_strings.HELP_SPACES if space else help_strings.HELP_ROOMS
+            elif self.args[0] == "link":
+                await self._link_room(make_admin=False)
+            elif self.args[0] == "link-and-admin":
+                await self._link_room(make_admin=True)
             elif self.args[0] == "list":
                 text = await self._list_rooms(spaces=space)
             elif self.args[0] == "list-no-admin":
                 text = await self._list_no_admin_rooms(spaces=space)
             elif self.args[0] == 'recreate':
-                return await self._recreate_room(subcommand=self.args[1] if len(self.args) > 1 else None)
+                return await self._recreate_room(
+                    subcommand=self.args[1] if len(self.args) > 1 else None, keep_encryption=True,
+                )
+            elif self.args[0] == 'recreate-unencrypted':
+                return await self._recreate_room(
+                    subcommand=self.args[1] if len(self.args) > 1 else None, keep_encryption=False,
+                )
             elif self.args[0] == 'unlink':
                 await self._unlink_room(leave=False)
             elif self.args[0] == 'unlink-and-leave':
@@ -349,6 +469,133 @@ class Command(object):
             text = await self._list_rooms()
         if text:
             await send_text_to_room(self.client, self.room.room_id, text)
+
+    async def _link_room(self, make_admin=False):
+        """
+        Link the room by adding to the Bubo room database.
+
+        Will try to join the room if not a member.
+
+        If "make_admin" is true and Bubo is synapse admin, it will make itself
+        admin using the admin API, which will also act as fallback to join the room
+        when lacking an invitation.
+        """
+        if not await self._ensure_coordinator():
+            return
+
+        if len(self.args) < 2:
+            if make_admin:
+                return await send_text_to_room(
+                    self.client, self.room.room_id, help_strings.HELP_ROOMS_LINK_AND_ADMIN,
+                )
+            else:
+                return await send_text_to_room(
+                    self.client, self.room.room_id, help_strings.HELP_ROOMS_LINK,
+                )
+        try:
+            room_id = await ensure_room_id(self.client, self.args[1])
+        except (KeyError, ProtocolError):
+            return await send_text_to_room(
+                self.client, self.room.room_id, f"Error resolving room ID",
+            )
+
+        room = self.store.get_room(room_id)
+        if room:
+            return await send_text_to_room(
+                self.client, self.room.room_id, f"Room {room_id} is already tracked by Bubo.",
+            )
+
+        # Ensure member
+        response = await self.client.joined_rooms()
+        if isinstance(response, JoinedRoomsError):
+            return await send_text_to_room(
+                self.client, self.room.room_id, f"Error fetching current joined rooms. Try again?",
+            )
+        if room_id not in response.rooms:
+            # Try join
+            response = await self.client.join(room_id)
+            if isinstance(response, JoinError):
+                # Try the admin API if admin
+                if self.config.is_synapse_admin:
+                    response = await make_room_admin(config=self.config, room_id=room_id, user_id=self.config.user_id)
+                    if not response:
+                        return await send_text_to_room(
+                            self.client, self.room.room_id,
+                            f"Failed to get access to the room. You'll need someone to invite Bubo manually.",
+                        )
+                else:
+                    return await send_text_to_room(
+                        self.client, self.room.room_id,
+                        f"Failed to join the room. You'll need someone to invite Bubo manually.",
+                    )
+        else:
+            if make_admin and self.config.is_synapse_admin:
+                # Are we admin?
+                _state, users = get_room_power_levels(self.client, room_id)
+                if users and users.get(self.config.user_id, 0) < 100:
+                    response = await make_room_admin(config=self.config, room_id=room_id, user_id=self.config.user_id)
+                    if not response:
+                        await send_text_to_room(
+                            self.client, self.room.room_id,
+                            f"Failed to make Bubo admin in the room. Continuing with linking anyway.",
+                        )
+
+        # Get some data
+        # We can't trust the room is in the matrix-nio store at this stage yet
+        name = ""
+        response = await self.client.room_get_state_event(room_id=room_id, event_type="m.room.name")
+        if isinstance(response, RoomGetStateEventResponse):
+            name = response.content.get("name")
+        alias = ""
+        response = await self.client.room_get_state_event(room_id=room_id, event_type="m.room.canonical_alias")
+        if isinstance(response, RoomGetStateEventResponse):
+            alias = response.content.get("alias")
+            if alias:
+                alias = alias.lstrip("#").split(":")[0]
+        title = ""
+        response = await self.client.room_get_state_event(room_id=room_id, event_type="m.room.topic")
+        if isinstance(response, RoomGetStateEventResponse):
+            title = response.content.get("title")
+        encrypted = False
+        response = await self.client.room_get_state_event(room_id=room_id, event_type="m.room.encryption")
+        if isinstance(response, RoomGetStateEventResponse):
+            encrypted = True
+        public = False
+        response = await self.client.room_get_state_event(room_id=room_id, event_type="m.room.join_rules")
+        if isinstance(response, RoomGetStateEventResponse):
+            public = response.content.get("join_rule") == "public"
+        room_type = "room"
+        response = await self.client.room_get_state_event(room_id=room_id, event_type="m.room.create")
+        if isinstance(response, RoomGetStateEventResponse):
+            room_type = "space" if response.content.get("type") == "m.space" else "room"
+
+        if not name or not alias:
+            # Currently required :(
+            if not name:
+                await send_text_to_room(
+                    self.client, self.room.room_id,
+                    f"Failed to link room, it's missing a name. Add a name and try again.",
+                )
+            if not alias:
+                await send_text_to_room(
+                    self.client, self.room.room_id,
+                    f"Failed to link room, it's missing an alias. Add an alias and try again.",
+                )
+            return
+
+        self.store.store_room(
+            name=name,
+            alias=alias,
+            room_id=room_id,
+            title=title,
+            encrypted=encrypted,
+            public=public,
+            room_type=room_type,
+        )
+
+        return await send_text_to_room(
+            self.client, self.room.room_id, f"Room {room_id} has been added to the Bubo database.",
+        )
 
     async def _list_no_admin_rooms(self, spaces: bool = False):
         text = f"I lack admin power in the following {'spaces' if spaces else 'rooms'} I maintain:\n\n"
@@ -380,7 +627,7 @@ class Command(object):
         text += "".join(rooms_list)
         return text
 
-    async def _recreate_room(self, subcommand):
+    async def _recreate_room(self, subcommand: str, keep_encryption: bool = True):
         """
         Command to recreate a room. Useful if the room has no admins.
         """
@@ -417,14 +664,16 @@ class Command(object):
                 self.client, self.room.room_id,
                 "Room recreate confirm must be given by the room recreate requester.",
             )
-        if int(time.time()) - room["timestamp"] > 60:
+        if int(time.time()) - room["timestamp"] > 300:
             return await send_text_to_room(
                 self.client, self.room.room_id,
-                "Room recreate confirmation must be given within 60 seconds. Please request recreation again.",
+                "Room recreate confirmation must be given within 300 seconds. Please request recreation again.",
             )
 
         # OK confirmation over, let's do stuff
-        new_room_id = await recreate_room(self.room, self.client, self.config, self.store, self.event.event_id)
+        new_room_id = await recreate_room(
+            self.room, self.client, self.config, self.store, self.event.event_id, keep_encryption=keep_encryption,
+        )
         if not new_room_id:
             return await send_text_to_room(
                 self.client, self.room.room_id,
@@ -518,7 +767,7 @@ class Command(object):
                         username = None
                         username_candidate = email.split('@')[0]
                         username_candidate = username_candidate.lower()
-                        username_candidate = re.sub(r'[^a-z0-9._\-]', '', username_candidate)
+                        username_candidate = re.sub(r'[^a-z\d._\-]', '', username_candidate)
                         candidate = username_candidate
                         counter = 0
                         while not username:
@@ -575,6 +824,43 @@ class Command(object):
                     logger.debug("users invite - Invited user: %s", email)
                     texts.append(f"Successfully invited {email}!")
                 text = '\n'.join(texts)
+            elif self.args[0] == "rooms":
+                if not await self._ensure_admin():
+                    return
+                if not self.config.is_synapse_admin:
+                    return await send_text_to_room(
+                        self.client, self.room.room_id,
+                        "Bubo must be Synapse admin to use this command. Please contact your system administrator",
+                    )
+                if len(self.args) < 2 or self.args[1] == "help":
+                    return await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_USERS_ROOMS)
+
+                user_id = self.args[1]
+                try:
+                    check_user_id(user_id)
+                except ValueError:
+                    await send_text_to_room(
+                        self.client,
+                        self.room.room_id,
+                        f"Invalid user mxid: {user_id}",
+                    )
+                rooms = await get_user_rooms(self.config, user_id)
+                if not rooms:
+                    return await send_text_to_room(
+                        self.client, self.room.room_id,
+                        f"Cannot find {user_id} in any rooms on this server.",
+                    )
+                else:
+                    room_list = []
+                    for room in rooms:
+                        room_str = f"{room.get('name')} ({room.get('canonical_alias')})" \
+                            if room.get("canonical_alias") else \
+                            f"{room.get('name')} ({room.get('room_id')})"
+                        room_list.append(room_str)
+                    return await send_text_to_room(
+                        self.client, self.room.room_id,
+                        f"User {user_id} found in the following rooms:\n\n{'<br>'.join(room_list)}"
+                    )
             elif self.args[0] == "signuplink":
                 if not await self._ensure_coordinator():
                     return

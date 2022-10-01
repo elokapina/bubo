@@ -9,14 +9,14 @@ import sqlite3
 # noinspection PyPackageRequirements
 from nio import MegolmEvent
 
-latest_db_version = 9
+latest_db_version = 10
 
 logger = logging.getLogger(__name__)
 
 
 class Storage(object):
     def __init__(self, db_path):
-        """Setup the database
+        """Set up the database
 
         Runs an initial setup or migrations depending on whether a database file has already
         been created
@@ -99,10 +99,20 @@ class Storage(object):
         """, (room_id,))
         return results.fetchone()
 
-    def get_room(self, room_id: str) -> Optional[str]:
+    def get_room(self, room_id: str) -> Optional[sqlite3.Row]:
         results = self.cursor.execute("""
             select * from rooms where room_id = ?
         """, (room_id,))
+        return results.fetchone()
+
+    def get_room_by_alias(self, alias: str) -> Optional[sqlite3.Row]:
+        if alias.startswith("#"):
+            localpart = alias.split(":")[0].strip("#")
+        else:
+            localpart = alias
+        results = self.cursor.execute("""
+            select id, name, alias, room_id, title, icon, encrypted, public, type from rooms where alias = ?
+        """, (localpart,))
         return results.fetchone()
 
     def get_room_id(self, alias: str) -> Optional[str]:
@@ -132,6 +142,12 @@ class Storage(object):
         """, (room_id,))
         self.conn.commit()
 
+    def set_room_alias(self, room_id: str, alias: str) -> None:
+        self.cursor.execute("""
+            update rooms set alias = ? where room_id = ?;
+        """, (alias.split(":")[0].strip("#"), room_id))
+        self.conn.commit()
+
     def set_room_id(self, alias: str, room_id: str) -> None:
         self.cursor.execute("""
             update rooms set room_id = ? where alias = ?;
@@ -144,14 +160,6 @@ class Storage(object):
                 (event_id, room_id) values 
                 (?, ?);
         """, (event_id, room_id))
-        self.conn.commit()
-
-    def store_community(self, name: str, alias: str, title: str):
-        self.cursor.execute("""
-            insert into communities
-                (name, alias, title) values 
-                (?, ?, ?);
-        """, (name, alias, title))
         self.conn.commit()
 
     def store_encrypted_event(self, event: MegolmEvent):
@@ -174,6 +182,16 @@ class Storage(object):
                 (requester, room_id, timestamp) values 
                 (?, ?, ?);
         """, (requester, room_id, timestamp))
+        self.conn.commit()
+
+    def store_room(self, name, alias, room_id, title, encrypted, public, room_type):
+        self.cursor.execute("""
+            insert into rooms (
+                name, alias, room_id, title, encrypted, public, type
+            ) values (
+                ?, ?, ?, ?, ?, ?, ?
+            )
+        """, (name, alias, room_id, title, encrypted, public, room_type))
         self.conn.commit()
 
     def unlink_room(self, room_id: str):

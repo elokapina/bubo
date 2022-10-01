@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 from typing import List, Optional, Dict
+from urllib.parse import quote_plus
 
 import aiohttp
 
@@ -12,6 +13,23 @@ logger = logging.getLogger(__name__)
 
 API_PREFIX_V1 = "/_synapse/admin/v1"
 API_PREFIX_V2 = "/_synapse/admin/v2"
+
+
+async def get_room(config: Config, session: aiohttp.ClientSession, room_id: str) -> Optional[Dict]:
+    headers = get_request_headers(config)
+    async with session.get(
+        f"{config.homeserver_url}{API_PREFIX_V1}/rooms/{room_id}",
+        headers=headers,
+    ) as response:
+        if response.status == 429:
+            await asyncio.sleep(1)
+            return await get_room(config, session, room_id)
+        try:
+            response.raise_for_status()
+            return await response.json()
+        except Exception as ex:
+            logger.warning("Failed to get room %s: %s", room_id, ex)
+            return
 
 
 async def get_temporary_user_token(
@@ -36,6 +54,34 @@ async def get_temporary_user_token(
             return
 
 
+async def get_user_rooms(config: Config, user_id: str) -> List:
+    headers = get_request_headers(config)
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            f"{config.homeserver_url}{API_PREFIX_V1}/users/{user_id}/joined_rooms",
+            headers=headers,
+        ) as response:
+            if response.status == 429:
+                await asyncio.sleep(1)
+                return await get_user_rooms(config, user_id)
+            try:
+                response.raise_for_status()
+                data = await response.json()
+            except Exception as ex:
+                logger.warning("Failed to get user rooms for user %s: %s", user_id, ex)
+                return []
+        rooms = []
+        for room_id in data.get("joined_rooms", []):
+            room = await get_room(config, session, room_id)
+            if room:
+                rooms.append(room)
+            else:
+                rooms.append({
+                    "room_id": room_id,
+                })
+        return rooms
+
+
 async def get_temporary_user_tokens(config: Config, users: List[str]) -> Dict:
     headers = get_request_headers(config)
     tokens = {}
@@ -54,7 +100,7 @@ async def join_user(
     config: Config, headers: Dict, room_id_or_alias: str, session: aiohttp.ClientSession, user: str,
 ) -> bool:
     async with session.post(
-        f"{config.homeserver_url}{API_PREFIX_V1}/join/{room_id_or_alias}",
+        f"{config.homeserver_url}{API_PREFIX_V1}/join/{quote_plus(room_id_or_alias)}",
         json={
             "user_id": user,
         },
@@ -81,3 +127,24 @@ async def join_users(config: Config, users: List[str], room_id_or_alias: str) ->
             if result:
                 total_joined += 1
         return total_joined
+
+
+async def make_room_admin(config: Config, room_id: str, user_id: str) -> bool:
+    headers = get_request_headers(config)
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+                f"{config.homeserver_url}{API_PREFIX_V1}/rooms/{room_id}/make_room_admin",
+                json={
+                    "user_id": user_id,
+                },
+                headers=headers,
+        ) as response:
+            if response.status == 429:
+                await asyncio.sleep(1)
+                return await make_room_admin(config, room_id, user_id)
+            try:
+                response.raise_for_status()
+                return True
+            except Exception as ex:
+                logger.warning("Failed to make room admin in %s for %s: %s", room_id, user_id, ex)
+                return False

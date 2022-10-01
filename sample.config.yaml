@@ -27,11 +27,6 @@ matrix:
   is_synapse_admin: false
 
 # Different commands might require a permission.
-# Here we list the minimum permission needed for the command.
-#
-# - "communities" - listing or maintaining communities: coordinator
-# - "rooms" - listing or maintaining rooms: coordinator
-# - "invite" - invite a user to a room: coordinator
 permissions:
   # Users or list of users based on room membership, who are allowed to do anything with the bot.
   # Note currently this is actually just the same as coordinator, but more powerful
@@ -119,6 +114,26 @@ rooms:
   # Prefix to use when renaming old recreated rooms
   recreate_old_room_name_prefix: "OLD"
 
+  # Room groups
+  # Here you can create groups of rooms, which can be used by with the "groupjoin" command
+  # to join one or more users to a group of rooms with one command.
+  #
+  # Each level of groups (including the root level) can have a special key "__all__", which
+  # is a list of rooms users will be joined to for groups on this level or lower.
+  #
+  # A group can also just be a list of rooms for the lowest level.
+  #
+  # Example value:
+  # groups:
+  #   __all__:
+  #     - #common:domain.tld"
+  #   group1:
+  #     __all__:
+  #       - "#coolspace:domain.tld"
+  #     subgroup1:
+  #       - "#room:domain.tld"
+  #       - "!123456789:domain.tld"
+
 # Configuration related to bot callbacks
 callbacks:
   # Send a 'unable to decrypt this message' reply to the room if Bubo can't decrypt a message.
@@ -167,3 +182,49 @@ logging:
     enabled: false
     # Room ID
     room: !logs:example.com
+
+# Discourse integration
+discourse:
+  # URL to discourse instance
+  #url: https://discourse.domain.tld
+  # API credentials
+  #api_username: username
+  #api_key: secretkey
+
+  spaces:
+    # Spaces to add Discourse group spaces into based on their prefix
+    # '-' as the delimiter to find the prefix.
+    # For example 'abc-foobar' would be added to the space with the 'abc' key.
+    prefixes:
+      #abc: "#space-abc:domain.tld"
+
+    # Rooms to create
+    # For templates, the following variables are available:
+    # - Group display name: %groupdisplayname%
+    # - Group name: %groupname%
+    # - Group title: %grouptitle%
+    # - Group shortname (name with any prefix stripped): %groupshortname%
+    rooms:
+      - templates:
+          alias: "%groupshortname%"
+          name: "%groupdisplayname% - Living room"
+          title: "%grouptitle%"
+        joinable_via_parent: true
+        encrypted: true
+        public: false
+        suggested: true
+      - templates:
+          alias: "%groupshortname%-announcements"
+          name: "%groupdisplayname% - Announcements"
+          title: "%grouptitle%"
+        joinable_via_parent: true
+        encrypted: true
+        public: false
+        suggested: true
+
+    # If set, only these groups will be synced to spaces
+    # Use the Discourse group name for list items.
+    whitelist: []
+
+    # Set to true to dry-run spaces sync - no spaces or rooms will be actually created
+    dry_run: False

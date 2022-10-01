@@ -68,32 +68,20 @@ Any remaining text after `breakout` will be used as the room name.
 Note that while Bubo will stay in the breakout room itself, it will not maintain
 it in any way like the rooms created using the `rooms` command.
 
-#### `communities`
+#### `groupinvite`
 
-Maintain communities.
+Invite a user to a predefined group of rooms.
 
-*NOTE: This command currently operates on the communities implemented in Synapse
-without a stable spec. When communities are redesigned, this command will be ported
-to work with the new style communities.*
+Syntax:
 
-Ensure your Synapse settings allow community creation for non-admins or make Bubo
-an admin. It's probably safe, but no Bubo author will take responsibility.
+    groupinvite @user1:domain.tld groupname [subgroups]
 
-With no subcommands, Bubo will tell you which communities it maintains.
+Where "groupname" should be replaced with the group to join to. Additionally,
+subgroups can be given as well.
 
-Subcommands:
+Groups must be configured to the Bubo configuration file by an administrator.
 
-* `create`
-
-Create a community. Syntax:
-
-    communities create NAME ALIAS TITLE
-    
-For example:
-
-    communities create "My epic community" epic-community "The best community ever!"
-    
-Note, ALIAS should only contain lower case ascii characters and dashes (maybe).
+This command requires coordinator level permissions.
 
 #### `help`
 
@@ -102,63 +90,117 @@ Bubo kindly give some usage instructions.
 
 #### `invite`
 
-Invites users to rooms. Bubo must be in the room with sufficient power to be
-able to do the invite.
+Invite to rooms.
 
-Invite yourself to a room
+When given with only a room alias or ID parameter, invites you to that room.
 
-    invite #room:example.com
+To invite other users, give one or more user ID's (separated by a space) after
+the room alias or ID. 
+
+Examples:
+
+* Invite yourself to a room:
+
+  `invite #room:example.com`
                    
-Invite one or more users to a room maintained:
+* Invite one or more users to a room:
                    
-    invite #room:example.com @user1:example.com @user2:example.org
+  `invite #room:example.com @user1:example.com @user2:example.org`
+  
+Requires bot coordinator privileges. The bot must be in the room
+and with power to invite users.  
+
+#### `join`
+
+Join one or more users to rooms.
+
+Syntax:
+
+    join !roomidoralias:domain.tld @user1:domain.tld @user2:domain.tld
+    
+If Bubo has Synapse admin powers, it will try to join admin API join any local users
+(which still requires Bubo to be in the room and be able to invite).
+Otherwise, a normal onvitation is used.
+
+This command requires coordinator level permissions.
 
 #### `power`
 
 Set power level in a room. Usage:
 
-    power <user> <room> [<level>]
+`power <user> <room> [<level>]`
 
 * `user` is the user ID, example `@user:example.tld`
-* `room` is a room alias or ID, example `#room:example.tld`. Bot must have power 
-  to give power there.
+* `room` is a room alias or ID, example `#room:example.tld`. Bot must have power to give power there.
 * `level` is optional and defaults to `moderator`.
 
-Moderator rights can be given by coordinator level users. To give admin in a room, 
-user must be admin of the bot.
+Moderator rights can be given by coordinator level users. To give admin in a room, user must be admin of the bot.
 
-#### `rooms`
+#### `rooms` and `spaces`
 
-Maintains rooms.
+Maintains rooms and spaces.
 
-When given without parameters, Bubo will tell you about the rooms it maintains.
+When given without parameters, Bubo will tell you about the rooms or spaces it maintains.
 
-Subcommands:
+Subcommands below.
 
-* `create`
+##### `alias` - Manage room and space aliases
 
-Create a room using Bubo. Syntax:
+Manage room or space aliases.
 
-    rooms create NAME ALIAS TITLE ENCRYPTED(yes/no) PUBLIC(yes/no)
+Allows adding and removing aliases, and setting the main (canonical) alias of a room or space.
+
+Format:
+
+    rooms/spaces alias !roomidoralias:domain.tld subcommand #alias:domain.tld
+    
+Where "subcommand" can be one of: "add", "remove", "main".
+
+Examples:
+
+    rooms/spaces alias !roomidoralias:domain.tld add #alias:domain.tld 
+    rooms/spaces alias !roomidoralias:domain.tld remove #alias:domain.tld 
+    rooms/spaces alias !roomidoralias:domain.tld main #alias:domain.tld
+    
+Notes:
+
+* "remove" cannot remove the main alias. First add another alias and set it main alias.
+* "main" can only handle aliases for the same domain Bubo runs on currently. This may change in the future.
+
+This command requires coordinator level permissions.
+
+##### `create` - Create room or space
+
+Syntax:
+
+    rooms/spaces create NAME ALIAS TITLE ENCRYPTED(yes/no) PUBLIC(yes/no)
     
 Example:
 
-    rooms create "My awesome room" epic-room "The best room ever!" yes no
+    rooms/spaces create "My awesome room" epic-room "The best room ever!" yes no
     
 Note, ALIAS should only contain lower case ascii characters and dashes. 
 ENCRYPTED and PUBLIC are either 'yes' or 'no'.
 
-* `list`
+##### `link` and `link-and-admin` - Register rooms or spaces with Bubo
 
-Same as without a subcommand, Bubo will tell you all about the rooms it maintains.
+Both variants make Bubo attempt to join the room or space and store the room or space in 
+the database to start tracking it. If Bubo is Synapse admin and/or admin permissions is requested, 
+it will also try to join and/or make itself admin using the Synapse admin API.
 
-* `list-no-admin`
+The only parameter is a room/space ID or alias.
 
-List any rooms Bubo maintains where Bubo lacks admin privileges. 
+##### `list` - List rooms/spaces
 
-* `recreate`
+Same as without a subcommand, Bubo will tell you all about the rooms or spaces it maintains.
 
-Recreate a room. This is a bit like the room upgrade functionality in Element, but it's designed to
+##### `list-no-admin` - List rooms/spaces without Bubo admin privileges
+
+List any rooms or spaces Bubo maintains where Bubo lacks admin privileges. 
+
+##### `recreate` - Recreate a room or space
+
+Recreate a room or space. This is a bit like the room upgrade functionality in Element, but it's designed to
 also work when admin power levels have been lost in the room, and thus an upgrade cannot be done.
 In short the command will:
 
@@ -178,21 +220,14 @@ stay as it is, so in problem cases it should be enough to just rename the old ro
 This command requires Bubo admin privileges. It does not require Bubo to have any special power
 in the room to be recreated.
  
-* `unlink`
+##### `unlink` - Unregister a room or space
 
-  Remove the room from Bubo's room database. The only parameter is a room ID or alias.
+  Remove the room or space from Bubo's room database. The only parameter is a room/space ID or alias.
   
-* `unlink-and-leave`
+##### `unlink-and-leave` - Unregister a room or space, and leave it
 
-  Remove the room from Bubo's room database, then leave the room. The only parameter is a room ID or alias.
-
-#### `spaces`
-
-Mirrors `rooms` command for subcommands and functionality, with the exception that the created
-room will be of type Space.
-
-Spaces and non-space rooms are tracked separately so listing spaces and rooms produces only 
-the relevant results.
+  Remove the room or space from Bubo's room database, then leave the room or space. 
+  The only parameter is a room/space ID or alias.
 
 #### `users`
 
@@ -203,22 +238,32 @@ See `sample.config.yaml` for how to configure a Keycloak client.
 
 Subcommands:
 
-* `list` (or no subcommand)
+##### `list` (or no subcommand)
 
   List currently registered users. Requires admin level permissions.
 
-* `create`
+##### `create`
 
   Creates users for the given emails and sends them a password reset email. The users
   email will be marked as verified. Give one or more emails as parameters. Requires admin level permissions.
 
-* `invite`
+##### `invite`
   
   Send an invitation to the email(s) given for self-registration. Requires
   an instance of [keycloak-signup](https://github.com/elokapina/keycloak-signup).
   The invitation will contain a one-time link valid for 7 days. Requires coordinator level permissions.
 
-* `signuplink`
+##### `rooms`
+
+List the rooms of a user.
+
+Usage:
+
+    users rooms @user:domain.tld
+    
+Requires bot admin permissions. Bubo must also be a Synapse admin.
+
+##### `signuplink`
 
   Create a self-service signup link with a chosen amount of maximum signups
   and days of validity. Requires an instance of 
@@ -249,15 +294,15 @@ The sample config contains `room.power_levels` for the default power levels that
 Bubo will use for new rooms. By default, it will also enforce these power levels on
 old rooms, unless told not to.
 
-### Room and community maintenance
+### Room and space maintenance
 
-When Bubo starts, it will go through the rooms and communities it maintains (see above
+When Bubo starts, it will go through the rooms and spaces it maintains (see above
 commands). It will currently ensure the following details are correct:
 
-* Room or community exists (tip! you can mass-create rooms/communities by inserting them to
+* Room or space exists (tip! you can mass-create rooms/spaces by inserting them to
   the database without an ID and restarting)
-* Ensure rooms marked as encrypted are encrypted
-* Ensure room power levels (see above "Room power levels") 
+* Ensure rooms/spaces marked as encrypted are encrypted
+* Ensure room/spaces power levels (see above "Room power levels") 
 
 ## Development
 

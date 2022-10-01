@@ -13,14 +13,106 @@ from nio import (
 )
 # noinspection PyPackageRequirements
 from nio.http import TransportResponse
+# TODO fix missing __all__ in matrix-nio
+# noinspection PyProtectedMember, PyPackageRequirements
+from nio.responses import RoomPutAliasError, RoomDeleteAliasError
 
 from bubo import synapse_admin
 from bubo.chat_functions import invite_to_room, send_text_to_room, send_text_to_room_c2s
 from bubo.config import Config
 from bubo.storage import Storage
-from bubo.utils import with_ratelimit, get_users_for_access
+from bubo.utils import with_ratelimit, get_users_for_access, ensure_room_id
 
 logger = logging.getLogger(__name__)
+
+
+async def add_alias(room_alias_or_id: str, alias: str, client: AsyncClient) -> None:
+    """
+    Add a new alias to a room. Doesn't make it canonical, also
+    doesn't modify Bubo database which contains canonical aliases only.
+    """
+    room_id = await ensure_room_id(client, room_alias_or_id)
+    response = await client.room_put_alias(
+        room_alias=alias,
+        room_id=room_id,
+    )
+    if isinstance(response, RoomPutAliasError):
+        raise Exception(f"Failed to add alias {alias} to room {room_id}: {response.message}")
+
+
+async def add_membership_in_space(
+    parent_space: str, child: str, client: AsyncClient, config: Config, suggested: bool = False,
+) -> None:
+    """
+    Add a space or room as child to a space
+    """
+    parent_id = await ensure_room_id(client, parent_space)
+    child_id = await ensure_room_id(client, child)
+    response = await client.room_get_state_event(
+        room_id=parent_id,
+        event_type="m.space.child",
+        state_key=child_id,
+    )
+    if isinstance(response, RoomGetStateEventResponse):
+        content = response.content
+        if content.get('errcode', "") != 'M_NOT_FOUND':
+            if content.get("suggested") == suggested and content.get("via") == [config.server_name]:
+                logger.debug("Child %s membership in %s looks good already, not adding membership",
+                             child, parent_space)
+                return
+
+    logger.info("Adding child %s to %s", child, parent_space)
+    order = child.split(":")[0].lstrip("#") if child.startswith("#") else None
+    content = {
+        "suggested": suggested,
+        "via": [config.server_name],
+    }
+    if order:
+        content["order"] = order
+    response = await client.room_put_state(
+        room_id=parent_id,
+        event_type="m.space.child",
+        content=content,
+        state_key=child_id,
+    )
+    if isinstance(response, RoomPutStateError):
+        raise Exception(f"Failed to add child {child} to {parent_space}: {response.message}")
+
+
+async def add_parent_space(
+    parent_space: str, child: str, client: AsyncClient, config: Config, canonical: bool = False,
+) -> None:
+    """
+    Add a space as parent to space or room
+    """
+    parent_id = await ensure_room_id(client, parent_space)
+    child_id = await ensure_room_id(client, child)
+    response = await client.room_get_state_event(
+        room_id=child_id,
+        event_type="m.space.parent",
+        state_key=parent_id,
+    )
+    if isinstance(response, RoomGetStateEventResponse):
+        content = response.content
+        if content.get('errcode', "") != 'M_NOT_FOUND':
+            if content.get("canonical") == canonical and content.get("via") == [config.server_name]:
+                logger.debug("Parent space %s membership in %s looks good already, not adding parent space",
+                             parent_space, child)
+                return
+
+    logger.info("Adding parent space %s to %s", parent_space, child)
+
+    response = await client.room_put_state(
+        room_id=child_id,
+        event_type="m.space.parent",
+        content={
+            "canonical": canonical,
+            "via": [config.server_name],
+        },
+        state_key=parent_id,
+    )
+    if isinstance(response, RoomPutStateError):
+        raise Exception(f"Failed to add parent space {parent_space} to {child}: {response.message}")
 
 
 async def create_breakout_room(
@@ -44,24 +136,6 @@ async def create_breakout_room(
     await set_user_power(room_id, created_by, client, 100)
     await invite_to_room(client, room_id, created_by)
     return room_id
-
-
-async def ensure_room_encrypted(room_id: str, client: AsyncClient):
-    """
-    Ensure room is encrypted.
-    """
-    state = await client.room_get_state_event(room_id, "m.room.encryption")
-    if state.content.get('errcode') == 'M_NOT_FOUND':
-        event_dict = EnableEncryptionBuilder().as_dict()
-        response = await client.room_put_state(
-            room_id=room_id,
-            event_type=event_dict["type"],
-            content=event_dict["content"],
-        )
-        if isinstance(response, RoomPutStateError):
-            if response.status_code == "M_LIMIT_EXCEEDED":
-                time.sleep(3)
-                return ensure_room_encrypted(room_id, client)
 
 
 async def delete_user_room_tag(
@@ -137,85 +211,89 @@ async def ensure_room_power_levels(
 
 
 async def ensure_room_exists(
-        room: tuple, client: AsyncClient, store: Storage, config: Config,
-) -> Tuple[str, Optional[str]]:
+        room: tuple, client: AsyncClient, store: Storage, config: Config, dry_run: bool = False,
+) -> Tuple[str, str]:
     """
     Maintains a room.
+
+    Returns a tuple of:
+      - created/exists string
+      - room_id
     """
     dbid, name, alias, room_id, title, icon, encrypted, public, room_type = room
-    logger.debug(f"Ensuring room: {room}")
+    if room_type not in ("space", "room"):
+        room_type = "room"
+    logger.debug("Ensuring %s: %s", room_type, room)
     room_created = False
-    logger.info(f"Ensuring room {name} ({alias}) exists")
-    state = []
-    if encrypted:
-        state.append(
-            EnableEncryptionBuilder().as_dict(),
-        )
-    # Check if room exists
+    logger.info("Ensuring %s %s (%s) exists", room_type, name, alias)
+
+    if not dbid:
+        # Check if we track this room already
+        db_room = store.get_room_by_alias(alias)
+        if db_room:
+            dbid = db_room[0]
+            room_id = db_room[3]
+            logger.info("%s %s found in the database as %s", room_type.capitalize(), name, room_id)
+
     if not room_id:
-        logger.info(f"Room '{alias}' ID unknown")
+        # Check if room exists
         response = await client.room_resolve_alias(f"#{alias}:{config.server_name}")
         if getattr(response, "room_id", None):
             room_id = response.room_id
-            logger.info(f"Room '{alias}' resolved to {room_id}")
+            logger.info("%s '%s' resolved to %s", room_type.capitalize(), alias, room_id)
         else:
-            logger.info(f"Could not resolve room '{alias}', will try create")
+            logger.info("Could not resolve %s '%s', will try create", room_type, alias)
             # Create room
             space = room_type == "space"
-            response = await client.room_create(
-                visibility=RoomVisibility.public if public else RoomVisibility.private,
-                alias=alias,
-                name=name,
-                topic=title,
-                initial_state=state,
-                power_level_override=config.rooms.get("power_levels"),
-                space=space,
-            )
-            if getattr(response, "room_id", None):
-                room_id = response.room_id
-                logger.info(f"Room '{alias}' created at {room_id}")
-                room_created = True
-            else:
-                if response.status_code == "M_LIMIT_EXCEEDED":
-                    # Wait and try again
-                    logger.info("Hit request limits, waiting 3 seconds...")
-                    time.sleep(3)
-                    return await ensure_room_exists(room, client, store, config)
-                raise Exception(f"Could not create room: {response.message}, {response.status_code}")
-        if dbid:
-            # Store room ID
-            store.cursor.execute("""
-                update rooms set room_id = ? where id = ?
-            """, (room_id, dbid))
-            store.conn.commit()
-            logger.info(f"Room '{alias}' room ID stored to database")
-        else:
-            store.cursor.execute("""
-                insert into rooms (
-                    name, alias, room_id, title, encrypted, public, type
-                ) values (
-                    ?, ?, ?, ?, ?, ?, ?
+            state = []
+            if encrypted:
+                state.append(
+                    EnableEncryptionBuilder().as_dict(),
                 )
-            """, (name, alias, room_id, title, encrypted, public, room_type))
-            store.conn.commit()
-            logger.info(f"Room '{alias}' creation stored to database")
+            if not dry_run:
+                response = await client.room_create(
+                    visibility=RoomVisibility.public if public else RoomVisibility.private,
+                    alias=alias,
+                    name=name,
+                    topic=title,
+                    initial_state=state,
+                    power_level_override=config.rooms.get("power_levels"),
+                    space=space,
+                )
+                if getattr(response, "room_id", None):
+                    room_id = response.room_id
+                    logger.info(f"Room '{alias}' created at {room_id}")
+                    room_created = True
+                else:
+                    if response.status_code == "M_LIMIT_EXCEEDED":
+                        # Wait and try again
+                        logger.info("Hit request limits, waiting 3 seconds...")
+                        time.sleep(3)
+                        return await ensure_room_exists(room, client, store, config)
+                    raise Exception(f"Could not create room: {response.message}, {response.status_code}")
+            else:
+                logger.info("Not creating %s '%s' due to dry run", room_type, alias)
+        if not dry_run:
+            if dbid:
+                # Store room ID
+                store.cursor.execute("""
+                    update rooms set room_id = ? where id = ?
+                """, (room_id, dbid))
+                store.conn.commit()
+                logger.info("%s '%s' room ID stored to database", room_type.capitalize(), alias)
+            else:
+                store.store_room(name, alias, room_id, title, encrypted, public, room_type)
+                logger.info("%s '%s' creation stored to database", room_type, alias)
 
-    if encrypted:
-        await ensure_room_encrypted(room_id, client)
+    if not dry_run:
+        room_members = await with_ratelimit(client, "joined_members", room_id)
+        members = getattr(room_members, "members", [])
 
-        # TODO ensure room name + title
-        # TODO ensure room alias
-
-    # TODO Add rooms to communities
-
-    room_members = await with_ratelimit(client, "joined_members", room_id)
-    members = getattr(room_members, "members", [])
-
-    await ensure_room_power_levels(room_id, client, config, members)
+        await ensure_room_power_levels(room_id, client, config, members)
 
     if room_created:
-        return "created", None
-    return "exists", None
+        return "created", room_id
+    return "exists", room_id
 
 
 async def get_room_power_levels(
@@ -277,6 +355,7 @@ async def get_room_directory_status(config: Config, session: aiohttp.ClientSessi
 
 async def recreate_room(
     room: MatrixRoom, client: AsyncClient, config: Config, store: Storage, last_event_id: str,
+    keep_encryption: bool = True,
 ) -> Optional[str]:
     """
     Replace a room with a new room.
@@ -326,7 +405,7 @@ async def recreate_room(
         remote_users = [user for user in users if not user.endswith(f":{config.server_name}")
                         and user != config.user_id]
         initial_state = []
-        if room.encrypted:
+        if room.encrypted and keep_encryption:
             initial_state.append({
                 "type": "m.room.encryption",
                 "state_key": "",
@@ -432,18 +511,24 @@ async def recreate_room(
         # Add aliases to the new room
         if alias or alt_aliases:
             if alias:
-                await client.room_put_alias(
-                    room_alias=alias,
-                    room_id=new_room.room_id,
-                )
-            await client.room_put_state(
-                room_id=new_room.room_id,
-                event_type="m.room.canonical_alias",
-                content={
-                    "alias": alias,
-                    "alt_aliases": alt_aliases,
-                },
-            )
+                # noinspection PyBroadException
+                try:
+                    await add_alias(room_alias_or_id=new_room.room_id, alias=alias, client=client)
+                except Exception:
+                    await send_text_to_room_c2s(
+                        config,
+                        new_room.room_id,
+                        f"**Warning**: There was an error updating the alias of the new room - please see bot logs",
+                    )
+                else:
+                    await client.room_put_state(
+                        room_id=new_room.room_id,
+                        event_type="m.room.canonical_alias",
+                        content={
+                            "alias": alias,
+                            "alt_aliases": alt_aliases,
+                        },
+                    )
 
         # Room directory
         async with aiohttp.ClientSession() as session:
@@ -484,6 +569,111 @@ async def recreate_room(
             )
         except Exception as ex:
             logger.error(f"Failed to inform of error to the room to be recreated: {ex}")
+
+
+async def remove_alias(room_alias_or_id: str, alias: str, client: AsyncClient) -> None:
+    """
+    Remove alias from a room.
+
+    Cannot be used to remove the canonical alias.
+    """
+    room_id = await ensure_room_id(client, room_alias_or_id)
+    # Check not canonical
+    response = await client.room_get_state_event(
+        room_id=room_id,
+        event_type="m.room.canonical_alias",
+    )
+    if isinstance(response, RoomGetStateEventError) or response.content.get("alias") == alias:
+        raise Exception("Unable to remove canonical alias or canonical alias not found")
+
+    # Remove
+    response = await client.room_delete_alias(
+        room_alias=alias,
+    )
+    if isinstance(response, RoomDeleteAliasError):
+        raise Exception(f"Failed to delete alias {alias} from room {room_id}: {response.message}")
+
+
+async def set_canonical_alias(
+    room_alias_or_id: str, alias: str, client: AsyncClient, store: Storage, config: Config,
+) -> None:
+    """
+    Set a room alias as canonical (ie main alias).
+
+    Also updates Bubo database, if the room is registered to Bubo.
+    """
+    # If Bubo owned room, only allow local aliases
+    # Because of previous decisions to store aliases as the localpart.
+    # To remove this restriction, refractoring needs to be done.
+    try:
+        if alias.split(':')[1] != config.server_name:
+            raise Exception("Currently can only set canonical aliases to same server where the bot runs, sorry.")
+    except IndexError:
+        raise Exception("Alias format seems wrong, should be for example #alias:domain.tld")
+
+    room_id = await ensure_room_id(client, room_alias_or_id)
+    # Get any previous alt aliases
+    alt_aliases = []
+    response = await client.room_get_state_event(
+        room_id=room_id,
+        event_type="m.room.canonical_alias",
+    )
+    if isinstance(response, RoomGetStateEventResponse):
+        alt_aliases = response.content.get("alt_aliases", [])
+
+    # Set the canonical alias
+    await client.room_put_state(
+        room_id=room_id,
+        event_type="m.room.canonical_alias",
+        content={
+            "alias": alias,
+            "alt_aliases": alt_aliases,
+        },
+    )
+    if isinstance(response, RoomPutStateError):
+        raise Exception(f"Failed to set canonical alias {alias} for room {room_id}: {response.message}")
+
+    # Update Bubo db if needed, assuming this is a locally owned alias
+    room = store.get_room_by_alias(alias)
+    if room:
+        store.set_room_alias(room_id, alias)
+
+
+async def set_join_rules(
+    room_alias_or_id: str, join_rule: str, client: AsyncClient, allow: List = None,
+) -> None:
+    """
+    Set a join rule for a room or space.
+
+    Optionally give allow conditions.
+    """
+    room_id = await ensure_room_id(client, room_alias_or_id)
+    response = await client.room_get_state_event(
+        room_id=room_id,
+        event_type="m.room.join_rules",
+    )
+    if isinstance(response, RoomGetStateEventResponse):
+        content = response.content
+        if content.get('errcode', "") != 'M_NOT_FOUND':
+            if content.get("join_rule") == join_rule and content.get("allow", None) == allow:
+                logger.debug("Join rule looks good for %s, not modifying", room_id)
+                return
+
+    logger.info("Setting join rule of %s to %s with allow %s", room_id, join_rule, allow)
+
+    content = {
+        "join_rule": join_rule,
+    }
+    if allow:
+        content["allow"] = allow
+
+    response = await client.room_put_state(
+        room_id=room_id,
+        event_type="m.room.join_rules",
+        content=content,
+    )
+    if isinstance(response, RoomPutStateError):
+        raise Exception(f"Failed to set join rules of {room_id}: {response.message}")
 
 
 async def set_room_directory_status(
@@ -585,7 +775,7 @@ async def maintain_configured_rooms(client: AsyncClient, store: Storage, config:
     logger.info("Starting maintaining of rooms")
 
     results = store.cursor.execute("""
-        select * from rooms
+        select id, name, alias, room_id, title, icon, encrypted, public, type from rooms
     """)
 
     rooms = results.fetchall()
