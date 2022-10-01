@@ -30,6 +30,8 @@
 
 * The `invite` command will now check the user exists before sending an invitation.
 
+* Use `pip-tools` to lock dependencies.
+
 ### Fixed
 
 * Force `charset_normalizer` dependency logs to `warning` level to avoid spammy info
