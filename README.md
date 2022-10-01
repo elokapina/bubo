@@ -13,6 +13,8 @@ Based on [nio-template](https://github.com/anoadragon453/nio-template), a templa
 
 ## Installation
 
+### Docker (recommended)
+
 Docker images [are available](https://hub.docker.com/r/elokapinaorg/bubo).
 
 An example configuration file is provided as `sample.config.yaml`.
@@ -31,6 +33,15 @@ mkdir data
 docker run -v ${PWD}/config.docker.yaml:/config/config.yaml:ro \
     -v ${PWD}/data:/data --name bubo elokapinaorg/bubo
 ```
+
+### Source
+
+* Install any system dependencies by copying what the Dockerfile does 
+* Create a Python 3.8+ virtualenv
+* Do `pip install -U pip setuptools pip-tools`
+* Do `pip-sync`
+* Copy the example `sample.config.yaml` file into `config.yaml` and edit
+* Run with `python main.py config.yaml`
 
 ## Usage
 
@@ -307,6 +318,19 @@ commands). It will currently ensure the following details are correct:
 ## Development
 
 If you need help or want to otherwise chat, jump to `#bubo:elokapina.fi`!
+
+### Dependencies
+
+* Create a Python 3.8+ virtualenv
+* Do `pip install -U pip setuptools pip-tools`
+* Do `pip-sync`
+
+To update dependencies, do NOT edit `requirements.txt` directly. Any changes go into
+`requirements.in` and then you run `pip-compile`. If you want to upgrade existing
+non-pinned (in `requirements.in`) dependencies, run `pip-compile --upgrade`, keeping
+the ones that you want to update in `requirements.txt` when commiting. See more info
+about `pip-tools` at https://github.com/jazzband/pip-tools
+
 
 ### Releasing
 
