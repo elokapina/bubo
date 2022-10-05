@@ -11,6 +11,7 @@ Available commands:
 * rooms - List and manage rooms
 * spaces - List and manage spaces
 * users - List and manage users and signup links
+* keys - List and manage smart lock keys
                    
 More help on commands or subcommands using 'help' as the next parameter.
                    
@@ -291,4 +292,17 @@ Creates a unique signup link. The link will have a configured amount of maximum 
 
 For example `users signupslink 50 7` would create a link for a maximum of 50 signups and with a validity period
 of 7 days.
+"""
+
+HELP_PINDORA_DISABLED = """
+Pindora is currently not enabled for this bot.
+"""
+
+HELP_KEYS = """
+Create a Pindora key with name that is valid x hours from now:
+`pindora create key_name valid_for_hours`
+
+The default value for hours is 3.
+
+For example, `pindora create test 5` would create a key with name "test" for 5 hours.
 """

@@ -23,6 +23,8 @@ from bubo.rooms import (
 from bubo.synapse_admin import make_room_admin, join_users, get_user_rooms
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
 from bubo.utils import get_users_for_access, with_ratelimit, ensure_room_id
+from bubo.api.pindora import create_new_key
+
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +78,17 @@ class Command(object):
             return False
         return True
 
+    async def _ensure_pindora_user(self) -> bool:
+        pindora_users = await get_users_for_access(self.client, self.config, "pindora_users")
+        if self.event.sender not in pindora_users:
+            await send_text_to_room(
+                self.client,
+                self.room.room_id,
+                f"{TEXT_PERMISSION_DENIED} Pindora level access needed.",
+            )
+            return False
+        return True
+
     async def process(self):
         """Process the command"""
         if self.command.startswith("breakout"):
@@ -100,6 +113,8 @@ class Command(object):
             await self._rooms(space=True)
         elif self.command.startswith("users"):
             await self._users()
+        elif self.command.startswith("pindora"):
+            await self._pindora()
         else:
             await self._unknown_command()
 
@@ -626,6 +641,40 @@ class Command(object):
             rooms_list.append(f"* {room['name']} / #{room['alias']}:{self.config.server_name} / {room['room_id']}\n")
         text += "".join(rooms_list)
         return text
+
+    async def _pindora(self):
+        if not self.config.pindora_enabled:
+            await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_PINDORA_DISABLED)
+            return
+
+        if not await self._ensure_pindora_user():
+            return
+
+        if self.args:
+            subcommand = self.args[0]
+            if subcommand == "create":
+                name = None
+                try:
+                    name = self.args[1]
+                except:
+                    pass
+
+                if not name:
+                    await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_KEYS)
+                    return
+
+                hours = None
+                try:
+                    hours = self.args[2]
+                except:
+                    pass
+
+                key, magic_url = create_new_key(self.config.pindora_id, self.config.pindora_token, name, hours=hours, pindora_timezone=self.config.pindora_timezone)
+                await send_text_to_room(self.client, self.room.room_id, f"Code: {key}, Magic url: {magic_url}")
+            else:
+                await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_KEYS)
+        else:
+            await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_KEYS)
 
     async def _recreate_room(self, subcommand: str, keep_encryption: bool = True):
         """

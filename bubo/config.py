@@ -105,6 +105,7 @@ class Config(object):
                 raise ConfigError(f"Coordinator {coordinator} does not look like a user or room")
         self.permissions_demote_users = self._get_cfg(["permissions", "demote_users"], default=False, required=False)
         self.permissions_promote_users = self._get_cfg(["permissions", "promote_users"], default=True, required=False)
+        self.pindora_users = self._get_cfg(["permissions", "pindora_users"], default=[], required=False)
 
         # Rooms
         self.rooms = self._get_cfg(["rooms"], default={}, required=False)
@@ -123,6 +124,12 @@ class Config(object):
 
         # Discourse
         self.discourse = self._get_cfg(["discourse"], default={}, required=False)
+
+        # Pindora
+        self.pindora_enabled = self._get_cfg(["pindora", "enabled"], default=False, required=False)
+        self.pindora_token = self._get_cfg(["pindora", "token"], required=False)
+        self.pindora_id = self._get_cfg(["pindora", "id"], required=False)
+        self.pindora_timezone = self._get_cfg(["pindora", "timezone"], required=False)
 
     def _get_cfg(
             self,

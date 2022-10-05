@@ -45,6 +45,10 @@ permissions:
   coordinators:
     - "@coordinator:example.com"
     - "!asdfgh12345:example.com"
+  # These users are allowed to generate Pindora door lock codes
+  pindora_users:
+    - "@pindora_user_1:example.com"
+    - "!pindora_user_2:example.com"
   ### Some configuration
   # Demote users who have too much power in a room
   demote_users: false
@@ -152,6 +156,13 @@ email:
   auth:
     username: janet
     password: foobar
+
+# Pindora smart lock API configuration
+pindora:
+  enabled: false
+  token: secrettoken
+  id: pindoraid
+  timezone: Europe/Helsinki
 
 # Storage related configuration
 storage:
