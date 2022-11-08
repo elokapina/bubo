@@ -669,8 +669,11 @@ class Command(object):
                 except:
                     pass
 
-                key, magic_url = create_new_key(self.config.pindora_id, self.config.pindora_token, name, hours=hours, pindora_timezone=self.config.pindora_timezone)
-                await send_text_to_room(self.client, self.room.room_id, f"Code: {key}, Magic url: {magic_url}")
+                try:
+                    key, magic_url = create_new_key(self.config.pindora_id, self.config.pindora_token, name, hours=hours, pindora_timezone=self.config.pindora_timezone)
+                    await send_text_to_room(self.client, self.room.room_id, f"Code: {key}, Magic url: {magic_url}")
+                except:
+                    await send_text_to_room(self.client, self.room.room_id, f"Generating code failed, please contact administrators")
             else:
                 await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_KEYS)
         else:
