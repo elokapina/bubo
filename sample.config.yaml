@@ -48,7 +48,7 @@ permissions:
   # These users are allowed to generate Pindora door lock codes
   pindora_users:
     - "@pindora_user_1:example.com"
-    - "!pindora_user_2:example.com"
+    - "!pindora_room:example.com"
   ### Some configuration
   # Demote users who have too much power in a room
   demote_users: false
