@@ -11,7 +11,7 @@ Available commands:
 * rooms - List and manage rooms
 * spaces - List and manage spaces
 * users - List and manage users and signup links
-* keys - List and manage smart lock keys
+* pindora - List and manage smart lock keys
                    
 More help on commands or subcommands using 'help' as the next parameter.
                    
