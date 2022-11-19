@@ -45,10 +45,6 @@ permissions:
   coordinators:
     - "@coordinator:example.com"
     - "!asdfgh12345:example.com"
-  # These users are allowed to generate Pindora door lock codes
-  pindora_users:
-    - "@pindora_user_1:example.com"
-    - "!pindora_room:example.com"
   ### Some configuration
   # Demote users who have too much power in a room
   demote_users: false
@@ -163,6 +159,10 @@ pindora:
   token: secrettoken
   id: pindoraid
   timezone: Europe/Helsinki
+  # These users are allowed to generate Pindora door lock codes
+  pindora_users:
+    - "@pindora_user_1:example.com"
+    - "!pindora_room:example.com"
 
 # Storage related configuration
 storage:
