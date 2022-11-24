@@ -24,6 +24,8 @@
 * Add `users` subcommand `rooms`. Lists users rooms on the server Bubo is installed on.
   Requires Bubo being Synapse admin and also requires Bubo admin permissions.
 
+* Added `pindora` command to manage Pindora keys.
+
 ### Changed
 
 * Allow removing room encryption by recreating with `rooms recreate-unencrypted` command.
