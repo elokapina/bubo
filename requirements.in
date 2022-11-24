@@ -12,3 +12,4 @@ python-keycloak<3
 python-slugify<7
 PyYAML<7
 requests<3
+pytz

@@ -30,6 +30,8 @@ async def get_users_for_access(client: AsyncClient, config: Config, access_type:
         existing_list = list(set(config.admins[:]))
     elif access_type == "coordinators":
         existing_list = list(set(config.admins[:] + config.coordinators[:]))
+    elif access_type == "pindora_users":
+        existing_list = list(set(config.pindora_users[:]))
     else:
         logger.error(f"Invalid access type: {access_type}")
         return set()

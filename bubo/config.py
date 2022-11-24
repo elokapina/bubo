@@ -124,6 +124,14 @@ class Config(object):
         # Discourse
         self.discourse = self._get_cfg(["discourse"], default={}, required=False)
 
+        # Pindora
+        self.pindora_enabled = self._get_cfg(["pindora", "enabled"], default=False, required=False)
+        self.pindora_token = self._get_cfg(["pindora", "token"], required=False)
+        self.pindora_id = self._get_cfg(["pindora", "id"], required=False)
+        self.pindora_timezone = self._get_cfg(["pindora", "timezone"], required=False)
+        self.pindora_users = self._get_cfg(["pindora", "pindora_users"], default=[], required=False)
+
+
     def _get_cfg(
             self,
             path: List[str],
