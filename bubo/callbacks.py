@@ -100,7 +100,7 @@ class Callbacks(object):
         if room_id:
             logger.info(f"Found breakout room for reaction in {room.room_id} by {event.sender} - "
                         f"inviting to {room_id}")
-            # Do an invite
+            # Do an invitation
             await invite_to_room(
                 self.client, room_id, event.sender,
             )
@@ -139,7 +139,7 @@ class Callbacks(object):
                 logger.warning(f"Failed to decrypt event %s" % (decrypted.event_id,))
 
     async def invite(self, room, event):
-        """Callback for when an invite is received. Join the room specified in the invite"""
+        """Callback for when an invitation is received. Join the room specified in the invite"""
         logger.debug(f"Got invite to {room.room_id} from {event.sender}.")
 
         # Attempt to join 3 times before giving up

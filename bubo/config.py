@@ -5,6 +5,7 @@ import yaml
 import sys
 from typing import List, Any
 
+# noinspection PyPackageRequirements
 from aiolog import matrix
 # noinspection PyPackageRequirements
 from nio.schemas import RoomRegex, UserIdRegex
@@ -131,7 +132,6 @@ class Config(object):
         self.pindora_timezone = self._get_cfg(["pindora", "timezone"], required=False)
         self.pindora_users = self._get_cfg(["pindora", "pindora_users"], default=[], required=False)
 
-
     def _get_cfg(
             self,
             path: List[str],
@@ -145,7 +145,7 @@ class Config(object):
             ConfigError: If required is specified and the object is not found
                 (and there is no default value provided), this error will be raised
         """
-        # Sift through the the config until we reach our option
+        # Shift through the config until we reach our option
         config = self.config
         for name in path:
             config = config.get(name)

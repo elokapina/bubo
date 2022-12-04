@@ -38,9 +38,11 @@ def create_new_key(pindora_id, pindora_token, name, pindora_timezone=None, hours
     response.raise_for_status()
     response_json = response.json()
 
+    magic_url = None
     if "code" in response_json:
         code = response_json["code"]
-
+    else:
+        raise Exception("Code not found in Pindora API resopnse")
     if "allowed_for_pindoras" in response_json:
         allowed_for_pindoras = response_json["allowed_for_pindoras"]
         if len(allowed_for_pindoras) > 0:

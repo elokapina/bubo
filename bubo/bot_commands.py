@@ -653,28 +653,30 @@ class Command(object):
         if self.args:
             subcommand = self.args[0]
             if subcommand == "create":
-                name = None
                 try:
                     name = self.args[1]
-                except:
-                    pass
-
-                if not name:
+                except KeyError:
                     await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_KEYS)
                     return
 
                 hours = None
                 try:
                     hours = self.args[2]
-                except:
+                except KeyError:
                     pass
 
                 try:
-                    key, magic_url = create_new_key(self.config.pindora_id, self.config.pindora_token, name, hours=int(hours), pindora_timezone=self.config.pindora_timezone)
+                    key, magic_url = create_new_key(
+                        self.config.pindora_id, self.config.pindora_token, name, hours=int(hours),
+                        pindora_timezone=self.config.pindora_timezone,
+                    )
+                    logger.info("New Pindora key created successfully, requested by %s", self.event.sender)
                     await send_text_to_room(self.client, self.room.room_id, f"Code: {key}, Magic url: {magic_url}")
                 except Exception as ex:
                     logger.error("pindora - error creating a key: %s", ex)
-                    await send_text_to_room(self.client, self.room.room_id, f"Generating code failed, please contact administrators")
+                    await send_text_to_room(
+                        self.client, self.room.room_id, f"Generating code failed, please contact administrators",
+                    )
             else:
                 await send_text_to_room(self.client, self.room.room_id, help_strings.HELP_KEYS)
         else:
