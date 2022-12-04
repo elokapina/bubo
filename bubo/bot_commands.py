@@ -670,7 +670,7 @@ class Command(object):
                     pass
 
                 try:
-                    key, magic_url = create_new_key(self.config.pindora_id, self.config.pindora_token, name, hours=hours, pindora_timezone=self.config.pindora_timezone)
+                    key, magic_url = create_new_key(self.config.pindora_id, self.config.pindora_token, name, hours=int(hours), pindora_timezone=self.config.pindora_timezone)
                     await send_text_to_room(self.client, self.room.room_id, f"Code: {key}, Magic url: {magic_url}")
                 except Exception as ex:
                     logger.error("pindora - error creating a key: %s", ex)
