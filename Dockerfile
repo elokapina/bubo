@@ -1,17 +1,17 @@
 # To build the image, run `docker build` command from the root of the
 # repository:
 #
-#    docker build -f docker/Dockerfile .
+#    docker build .
 #
 # There is an optional PYTHON_VERSION build argument which sets the
 # version of python to build against. For example:
 #
-#    docker build -f docker/Dockerfile --build-arg PYTHON_VERSION=3.8 .
+#    docker build --build-arg PYTHON_VERSION=3.8 .
 #
 # An optional LIBOLM_VERSION build argument which sets the
 # version of libolm to build against. For example:
 #
-#    docker build -f docker/Dockerfile --build-arg LIBOLM_VERSION=3.1.4 .
+#    docker build --build-arg LIBOLM_VERSION=3.1.4 .
 #
 
 
