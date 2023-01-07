@@ -49,6 +49,8 @@
 * Fixed rare bug that caused Bubo to suddenly start to react to all messages in non-DM 
   rooms even when command prefix was not used ([#17](https://github.com/elokapina/bubo/issues/18)).
 
+* Fixed config check failing in the case that the default is `False` and config is not required.
+
 ### Removed
 
 * Removed any attempts to maintain room encryption for old rooms on startup. This code
