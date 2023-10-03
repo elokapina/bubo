@@ -119,7 +119,7 @@ text-unidecode==1.3
     # via python-slugify
 unpaddedbase64==2.1.0
     # via matrix-nio
-urllib3==1.26.13
+urllib3==1.26.17
     # via
     #   python-keycloak
     #   requests
