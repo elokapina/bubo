@@ -6,7 +6,7 @@
 #
 aiofiles==0.6.0
     # via matrix-nio
-aiohttp==3.8.6
+aiohttp==3.9.0
     # via
     #   -r requirements.in
     #   aiohttp-socks
@@ -36,9 +36,7 @@ certifi==2023.7.22
 cffi==1.15.1
     # via python-olm
 charset-normalizer==2.1.1
-    # via
-    #   aiohttp
-    #   requests
+    # via requests
 dnspython==2.2.1
     # via email-validator
 ecdsa==0.18.0
