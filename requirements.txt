@@ -92,7 +92,7 @@ pyasn1==0.4.8
     #   rsa
 pycparser==2.21
     # via cffi
-pycryptodome==3.16.0
+pycryptodome==3.19.1
     # via matrix-nio
 pyrsistent==0.19.3
     # via jsonschema
