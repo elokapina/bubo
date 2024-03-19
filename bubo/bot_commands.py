@@ -25,7 +25,6 @@ from bubo.users import list_users, get_user_by_attr, create_user, send_password_
 from bubo.utils import get_users_for_access, with_ratelimit, ensure_room_id
 from bubo.api.pindora import create_new_key
 
-
 logger = logging.getLogger(__name__)
 
 TEXT_PERMISSION_DENIED = "I'm afraid I cannot let you do that."
@@ -121,9 +120,15 @@ class Command(object):
             await self._unknown_command()
 
     async def _batch(self):
-        commands = self.command.split("\n")
-        for command in commands:
-            await send_text_to_room(self.client, self.room.room_id, f"> ${command}")
+        messages = self.command.split("\n")
+        for msg in messages[1:]:
+            if msg:
+                await send_text_to_room(self.client, self.room.room_id, f"> Executing {msg}")
+                command = Command(self.client, self.store, self.config, msg, self.room, self.event)
+                try:
+                    await command.process()
+                except Exception as ex:
+                    await send_text_to_room(self.client, self.room.room_id, f"> {msg} error: {ex}")
 
     async def _alias(self):
         """
