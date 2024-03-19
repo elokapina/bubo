@@ -115,8 +115,15 @@ class Command(object):
             await self._users()
         elif self.command.startswith("pindora"):
             await self._pindora()
+        elif self.command.startswith("batch"):
+            await self._batch()
         else:
             await self._unknown_command()
+
+    async def _batch(self):
+        commands = self.command.split("\n")
+        for command in commands:
+            await send_text_to_room(self.client, self.room.room_id, f"> ${command}")
 
     async def _alias(self):
         """
