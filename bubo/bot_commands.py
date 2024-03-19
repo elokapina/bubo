@@ -495,7 +495,10 @@ class Command(object):
                 if len(args) != 2:
                     text = "add requires exactly two arguments: parent and child"
                 else:
-                    await add_membership_in_space(parent_space=args[0], child=args[1], client=self.client, config=self.config)
+                    try:
+                        await add_membership_in_space(parent_space=args[0], child=args[1], client=self.client, config=self.config)
+                    except Exception as ex:
+                        text = f"error adding membership: {ex}"
             else:
                 text = "Unknown subcommand!"
         else:
