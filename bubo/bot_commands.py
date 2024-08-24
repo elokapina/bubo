@@ -546,7 +546,7 @@ class Command(object):
         else:
             if make_admin and self.config.is_synapse_admin:
                 # Are we admin?
-                _state, users = get_room_power_levels(self.client, room_id)
+                _state, users = await get_room_power_levels(self.client, room_id)
                 if users and users.get(self.config.user_id, 0) < 100:
                     response = await make_room_admin(config=self.config, room_id=room_id, user_id=self.config.user_id)
                     if not response:
