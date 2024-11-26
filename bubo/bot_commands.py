@@ -18,13 +18,12 @@ from bubo.chat_functions import send_text_to_room, invite_to_room
 from bubo.discourse import Discourse
 from bubo.rooms import (
     ensure_room_exists, create_breakout_room, set_user_power, get_room_power_levels, recreate_room,
-    add_alias, remove_alias, set_canonical_alias,
+    add_alias, remove_alias, set_canonical_alias, add_membership_in_space,
 )
 from bubo.synapse_admin import make_room_admin, join_users, get_user_rooms
 from bubo.users import list_users, get_user_by_attr, create_user, send_password_reset, invite_user, create_signup_link
 from bubo.utils import get_users_for_access, with_ratelimit, ensure_room_id
 from bubo.api.pindora import create_new_key
-
 
 logger = logging.getLogger(__name__)
 
@@ -115,8 +114,21 @@ class Command(object):
             await self._users()
         elif self.command.startswith("pindora"):
             await self._pindora()
+        elif self.command.startswith("batch"):
+            await self._batch()
         else:
             await self._unknown_command()
+
+    async def _batch(self):
+        messages = self.command.split("\n")
+        for msg in messages[1:]:
+            if msg:
+                await send_text_to_room(self.client, self.room.room_id, f"> Executing {msg}")
+                command = Command(self.client, self.store, self.config, msg, self.room, self.event)
+                try:
+                    await command.process()
+                except Exception as ex:
+                    await send_text_to_room(self.client, self.room.room_id, f"> {msg} error: {ex}")
 
     async def _alias(self):
         """
@@ -478,6 +490,15 @@ class Command(object):
                 await self._unlink_room(leave=False)
             elif self.args[0] == 'unlink-and-leave':
                 await self._unlink_room(leave=True)
+            elif self.args[0] == "add":
+                args = self.args[1:]
+                if len(args) != 2:
+                    text = "add requires exactly two arguments: parent and child"
+                else:
+                    try:
+                        await add_membership_in_space(parent_space=args[0], child=args[1], client=self.client, config=self.config)
+                    except Exception as ex:
+                        text = f"error adding membership: {ex}"
             else:
                 text = "Unknown subcommand!"
         else:

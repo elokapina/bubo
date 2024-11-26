@@ -12,6 +12,7 @@ Available commands:
 * spaces - List and manage spaces
 * users - List and manage users and signup links
 * pindora - List and manage smart lock keys
+* batch - Execute a batch of commands line by line
                    
 More help on commands or subcommands using 'help' as the next parameter.
                    
