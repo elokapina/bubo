@@ -321,7 +321,7 @@ If you need help or want to otherwise chat, jump to `#bubo:elokapina.fi`!
 
 ### Dependencies
 
-* Create a Python 3.8+ virtualenv
+* Create a Python 3.10+ virtualenv
 * Do `pip install -U pip setuptools pip-tools`
 * Do `pip-sync`
 
