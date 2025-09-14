@@ -34,6 +34,8 @@
 
 * Use `pip-tools` to lock dependencies.
 
+* Docker image is now Python 3.10.
+
 ### Fixed
 
 * Force `charset_normalizer` dependency logs to `warning` level to avoid spammy info

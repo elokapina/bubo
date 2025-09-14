@@ -1,15 +1,13 @@
 # Matrix Handler that needs upstreaming
 git+https://github.com/jaywink/aiolog.git@0db27c59a1694857f58c2bae6874fb25c6c6f262#egg=aiolog
 
-# Versions pinned to the major version when pip-tools was added,
-# no other reason for any of these not to be upgraded further once
-# changelogs are checked.
-aiohttp<4
-email-validator<2
-matrix-nio[e2e]<0.21.0
-Markdown<4
+aiohttp
+email-validator
+matrix-nio[e2e]
+Markdown
+# Breaking changes in versions that need checking
 python-keycloak<3
-python-slugify<7
-PyYAML<7
-requests<3
+python-slugify
+PyYAML
+requests
 pytz
