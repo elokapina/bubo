@@ -2,6 +2,11 @@
 
 ## unreleased
 
+### Breaking changes
+
+* Always require a command prefix even in direct messages. This change is due to
+  issues matrix-nio has sometimes recognizing whether the room is a dm or a group.
+
 ### Added
 
 * Add `spaces` command. Mirrors `rooms` command for subcommands and functionality, with the 
@@ -41,15 +46,7 @@
 * Force `charset_normalizer` dependency logs to `warning` level to avoid spammy info
   logs about probing the chaos when the Matrix server is unavailable.
 
-* Added an extra member count check to when determining whether to consider a room
-  a one to one direct message, which ignores needing a command prefix. This is to
-  hopefully mitigate race conditions where Bubo is starting up and hasn't yet
-  determined the state of the room.
-
 * Fixed incorrect check for invalid coordinator room / user ID's when loading config ([#17](https://github.com/elokapina/bubo/pull/17)).
-
-* Fixed rare bug that caused Bubo to suddenly start to react to all messages in non-DM 
-  rooms even when command prefix was not used ([#17](https://github.com/elokapina/bubo/issues/18)).
 
 * Fixed config check failing in the case that the default is `False` and config is not required.
 

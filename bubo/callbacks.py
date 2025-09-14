@@ -61,21 +61,16 @@ class Callbacks(object):
             f"{room.user_name(event.sender)}: {msg}"
         )
 
-        # Process as message if in 2+ person room and no command prefix
-        # We used to use `room.is_group` but it seemed to lose state sometimes, see
-        # https://github.com/elokapina/bubo/issues/18
+        # Process as message if no command prefix
         has_command_prefix = msg.startswith(self.command_prefix)
-        if not has_command_prefix and room.member_count > 2:
+        if not has_command_prefix:
             # General message listener
             message = Message(self.client, self.store, self.config, msg, room, event)
             await message.process()
             return
 
-        # Otherwise if this is in a 1-1 with the bot or features a command prefix,
-        # treat it as a command
-        if has_command_prefix:
-            # Remove the command prefix
-            msg = msg[len(self.command_prefix):]
+        # Remove the command prefix
+        msg = msg[len(self.command_prefix):]
 
         command = Command(self.client, self.store, self.config, msg, room, event)
         await command.process()
