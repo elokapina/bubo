@@ -47,9 +47,8 @@ docker run -v ${PWD}/config.docker.yaml:/config/config.yaml:ro \
 
 ### Talking to Bubo
 
-Either prefix commands with `!bubo` (or another configured prefix) in a room Bubo is in or
-start a direct chat with it. When talking with Bubo directly, you don't need
-the `!bubo` prefix for commands.
+Prefix commands with `!bubo` (or another configured prefix) in a room Bubo is in or
+start a direct chat with it.
 
 ### Getting Bubo into a room
 
